@@ -30,18 +30,21 @@ This guide provides a "no-magic" approach that is reliable, debuggable, and work
 
 Your tests and local development need running instances of Kafka, Apicurio, and MySQL. The best way to manage this is with a Docker Compose file that Quarkus can automatically start and manage.
 
-#### **Understanding the Listener Configuration**
+**Environment Differences:**
+- **Development**: Uses shared `quarkus-pipeline-devservices` extension with vanilla Kafka (apache/kafka)
+- **Testing**: Uses per-service `compose-test-services.yml` files with Redpanda for faster startup and simpler configuration
 
-Kafka requires multiple listeners when running in Docker:
-- **PLAINTEXT** (`kafka-test:9092`): Internal listener for container-to-container communication (e.g., Apicurio connecting to Kafka)
-- **LOCALHOST** (`localhost:9093`): External listener for your test code running on the host machine
-- **CONTROLLER** (`kafka-test:9094`): KRaft controller listener for internal cluster management
+#### **Understanding the Redpanda Configuration**
 
-Your tests use the LOCALHOST listener, while Apicurio uses the PLAINTEXT listener. This dual-listener setup is critical for Docker networking.
+Redpanda provides Kafka-compatible messaging with simplified configuration:
+- **Internal listener** (`kafka-test:9092`): For container-to-container communication (e.g., Apicurio connecting to Redpanda)
+- **External listener** (`localhost:9095`): For your test code running on the host machine
+
+Your tests connect to `localhost:9095`, while Apicurio connects to `kafka-test:9092` internally. The `${DOCKER_GATEWAY_HOST:-172.17.0.1}` environment variable handles Docker networking differences between Linux and other platforms.
 
 #### **Production vs Test Environments**
 
-- **Test Environment** (shown below): Uses plaintext connections, in-memory storage for Apicurio, and exposed ports for direct access from test code
+- **Test Environment** (shown below): Uses Redpanda for Kafka-compatible messaging, SQL storage for Apicurio schemas, and exposed ports for direct access from test code
 - **Production Environment**: Should use TLS encryption, persistent storage for Apicurio (SQL database), authentication, and internal networking without exposed ports
 
 **`src/test/resources/compose-test-services.yml`**
@@ -100,33 +103,29 @@ services:
       \"
       "
 
-  # Kafka - KRaft mode (no Zookeeper needed)
+  # Redpanda for Kafka-compatible messaging (test environment)
   kafka-test:
     container_name: pipeline-kafka-test
-    image: confluentinc/cp-kafka:7.7.1
+    image: redpandadata/redpanda:latest
     hostname: kafka-test
     networks:
       - pipeline-test-network
+    command:
+      - redpanda start
+      - --smp 1
+      - --overprovisioned
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:9094
+      - --advertise-kafka-addr internal://kafka-test:9092,external://${DOCKER_GATEWAY_HOST:-172.17.0.1}:9095
     ports:
-      - "9092:9092"  # Internal listener (for Apicurio)
-      - "9093:9093"  # External listener (for host/tests)
-    environment:
-      KAFKA_NODE_ID: 1
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,LOCALHOST:PLAINTEXT
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9094,LOCALHOST://0.0.0.0:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka-test:9092,LOCALHOST://localhost:9093
-      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka-test:9094
-      KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      CLUSTER_ID: 'pipeline-test-cluster'
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      - "9095:9094"  # External port for localhost access
+    labels:
+      quarkus-dev-service-kafka: test
     healthcheck:
-      test: kafka-broker-api-versions --bootstrap-server localhost:9092
-      interval: 5s
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 3s
       timeout: 10s
       retries: 10
+      start_period: 5s
 
   # Apicurio Schema Registry - SQL storage with MySQL
   apicurio-registry-test:
@@ -172,7 +171,7 @@ services:
 
 3. **Kafka Listener Strategy**:
    - `PLAINTEXT://kafka-test:9092` - Used by Apicurio (container-to-container)
-   - `LOCALHOST://localhost:9093` - Used by host test code
+   - `localhost:9095` - Used by host test code
    - `CONTROLLER://kafka-test:9094` - KRaft internal
 
 4. **Health Checks**:
@@ -182,7 +181,7 @@ services:
 
 5. **Port Mapping**:
    - MySQL: `3307:3306` (avoids conflict with local MySQL on 3306)
-   - Kafka: `9093:9093` (external access for tests)
+   - Kafka: `9095:9094` (external access for tests)
    - Apicurio: `8081:8080` (API access from tests)
 
 ### **Part 2: `application.properties` Configuration**
@@ -221,7 +220,7 @@ Without specifying `return-class`, the Protobuf deserializer creates a `DynamicM
 %test.quarkus.compose.devservices.start-services=true
 
 # These will be OVERRIDDEN by the labels in the compose file
-%test.kafka.bootstrap.servers=localhost:9093
+%test.kafka.bootstrap.servers=localhost:9095
 %test.mp.messaging.connector.smallrye-kafka.apicurio.registry.url=http://localhost:8081/apis/registry/v3
 
 
@@ -281,81 +280,6 @@ public class AccountEventPublisher {
                     LOG.infof("Message sent successfully!");
                 }
             });
-    }
-}
-```
-
------
-
-## Alternative Approach: Using Testcontainers
-
-While Docker Compose works well for test environments, some services use Testcontainers for programmatic container management. This approach provides more control and better integration with JUnit lifecycle.
-
-### **Testcontainers Implementation**
-
-**Example from opensearch-manager (`OpenSearchTestResource.java`):**
-
-```java
-package io.pipeline.schemamanager;
-
-import io.quarkus.test.common.QuarkusTestResourceLifecycleManager;
-import org.jboss.logging.Logger;
-import org.opensearch.testcontainers.OpenSearchContainer;
-import org.testcontainers.containers.KafkaContainer;
-import org.testcontainers.utility.DockerImageName;
-
-import java.util.HashMap;
-import java.util.Map;
-
-public class OpenSearchTestResource implements QuarkusTestResourceLifecycleManager {
-
-    private static final Logger LOG = Logger.getLogger(OpenSearchTestResource.class);
-
-    private OpenSearchContainer<?> opensearch;
-    private KafkaContainer kafka;
-
-    @Override
-    public Map<String, String> start() {
-        Map<String, String> config = new HashMap<>();
-
-        // Start Kafka container
-        LOG.info("Starting Kafka test container...");
-        kafka = new KafkaContainer(DockerImageName.parse("confluentinc/cp-kafka:7.7.1"))
-                .withReuse(true);  // Reuse container across test runs for speed
-        kafka.start();
-        String kafkaBootstrapServers = kafka.getBootstrapServers();
-        LOG.info("Kafka test container started at: " + kafkaBootstrapServers);
-
-        // Start OpenSearch container
-        LOG.info("Starting OpenSearch test container...");
-        opensearch = new OpenSearchContainer<>(DockerImageName.parse("opensearchproject/opensearch:3.3.2"))
-                .withAccessToHost(true)
-                .withReuse(true);
-        opensearch.start();
-        LOG.info("OpenSearch test container started at: " + opensearch.getHost() + ":" + opensearch.getFirstMappedPort());
-
-        String opensearchAddress = "http://" + opensearch.getHost() + ":" + opensearch.getFirstMappedPort();
-
-        // Configure both services for Quarkus
-        config.put("opensearch.hosts", opensearchAddress);
-        config.put("kafka.bootstrap.servers", kafkaBootstrapServers);
-        config.put("mp.messaging.connector.smallrye-kafka.bootstrap.servers", kafkaBootstrapServers);
-
-        return config;
-    }
-
-    @Override
-    public void stop() {
-        if (opensearch != null) {
-            LOG.info("Stopping OpenSearch test container...");
-            opensearch.stop();
-            LOG.info("OpenSearch test container stopped.");
-        }
-        if (kafka != null) {
-            LOG.info("Stopping Kafka test container...");
-            kafka.stop();
-            LOG.info("Kafka test container stopped.");
-        }
     }
 }
 ```
