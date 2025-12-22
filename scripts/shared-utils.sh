@@ -122,8 +122,15 @@ set_registration_host() {
     local detected_ip
     detected_ip=$(detect_docker_bridge_ip)
 
-    # Export the environment variable
+    # Export the requested environment variable (backward compatibility)
     export "$env_var"="$detected_ip"
+
+    # Export standard variables for the registration library
+    export SERVICE_REGISTRATION_ADVERTISED_HOST="$detected_ip"
+    export SERVICE_REGISTRATION_INTERNAL_HOST="$detected_ip"
+
+    # Export legacy/alternative names for internal host
+    export DOCKER_BRIDGE_IP="$detected_ip"
 
     print_status "success" "Registration host set: $env_var=$detected_ip"
 }
