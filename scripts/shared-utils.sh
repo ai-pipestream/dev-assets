@@ -62,6 +62,14 @@ get_project_root() {
 
 # Detect Docker bridge IP address for service registration
 detect_docker_bridge_ip() {
+    # Method 0: Check if we are on macOS
+    if [[ "$(uname)" == "Darwin" ]]; then
+        # On macOS, host.docker.internal is the standard way for containers to reach the host.
+        # Even if 172.17.0.1 is pingable, it's often the Docker VM bridge, not the host.
+        echo "host.docker.internal"
+        return 0
+    fi
+
     # Try multiple methods to detect the Docker bridge IP
 
     # Method 1: Check if we're running inside Docker
