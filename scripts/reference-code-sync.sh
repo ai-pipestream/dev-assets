@@ -5,8 +5,11 @@ set -euo pipefail
 # Format: name|git_url|branch (use '-' to use default remote HEAD)
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
-MANIFEST_DEFAULT="${ROOT_DIR}/reference-code/repos.manifest.tsv"
+# dev-assets lives at $WORKSPACE/dev-tools/dev-assets, so the workspace root
+# is three levels up (scripts -> dev-assets -> dev-tools -> WORKSPACE).
+# reference-code/ is a sibling of core-projects/, modules/, and dev-tools/.
+ROOT_DIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+MANIFEST_DEFAULT="${SCRIPT_DIR}/config/reference-repos.tsv"
 
 source "${SCRIPT_DIR}/shared-utils.sh"
 
@@ -44,43 +47,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Prefer existing manifest files in dev-assets/scripts before creating a default
-# Candidate manifests (checked in order)
-CANDIDATE_MANIFESTS=(
-  "${SCRIPT_DIR}/config/reference-repos.tsv"
-  "${SCRIPT_DIR}/%20config/reference-repos.tsv"
-  "${ROOT_DIR}/reference-code/repos.manifest.tsv"
-)
-
-# If the user didn't explicitly pass --manifest (i.e. MANIFEST_PATH == MANIFEST_DEFAULT),
-# try to find an existing candidate and use it.
-if [[ "${MANIFEST_PATH}" == "${MANIFEST_DEFAULT}" ]]; then
-  for cand in "${CANDIDATE_MANIFESTS[@]}"; do
-    if [[ -f "${cand}" ]]; then
-      MANIFEST_PATH="${cand}"
-      break
-    fi
-  done
-fi
-
-# Create default manifest if it doesn't exist (only for the default location)
+# Manifest is committed in dev-assets/scripts/config/reference-repos.tsv.
+# Do not auto-generate one here; a silent default causes drift between developer machines.
 if [[ ! -f "${MANIFEST_PATH}" ]]; then
-  if [[ "${MANIFEST_PATH}" == "${MANIFEST_DEFAULT}" ]]; then
-    print_status "info" "Creating default manifest at: ${MANIFEST_PATH}"
-    mkdir -p "$(dirname "${MANIFEST_PATH}")"
-    cat > "${MANIFEST_PATH}" <<'EOF'
-# Reference repositories manifest
-# Format: name|git_url|branch (use '-' for default branch)
-# Common reference repos:
-spring-boot|https://github.com/spring-projects/spring-boot.git|-
-spring-framework|https://github.com/spring-projects/spring-framework.git|-
-vue-core|https://github.com/vuejs/core.git|main
-quarkus|https://github.com/quarkusio/quarkus.git|-
-EOF
-  else
-    print_status "error" "Manifest not found: ${MANIFEST_PATH}"
-    exit 1
-  fi
+  print_status "error" "Manifest not found: ${MANIFEST_PATH}"
+  print_status "info"  "Expected: ${SCRIPT_DIR}/config/reference-repos.tsv"
+  exit 1
 fi
 
 mkdir -p "${ROOT_DIR}/reference-code"
