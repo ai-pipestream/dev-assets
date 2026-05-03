@@ -1,0 +1,22 @@
+# ai-pipestream workspace configuration.
+#
+# Source of truth for: workspace root, JDK version, repo manifest.
+# Per-machine overrides go in $XDG_CONFIG_HOME/ai-pipestream/workspace.toml
+# (defaults to ~/.config/ai-pipestream/workspace.toml). Override file fields
+# are merged on top of these defaults.
+
+[workspace]
+# Workspace root. Repos are cloned under <root>/main/<category>/<repo>
+# and worktrees live under <root>/worktrees/.
+root = "/work"
+
+# JVM distribution (sdkman identifier). 21-tem is also supported.
+jdk = "25-tem"
+
+# Git protocol when cloning. Override per-run with --ssh / --https.
+clone_protocol = "https"
+
+# Parallel git clones during the bootstrap clone phase.
+parallelism = 8
+
+# Repo manifest is added in Phase 2 (see scripts/bootstrap.py).
