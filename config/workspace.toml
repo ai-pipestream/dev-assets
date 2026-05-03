@@ -11,6 +11,14 @@
 # checkouts and <root>/worktrees/ for in-progress branch worktrees.
 root = "/work"
 
+# Maven local repository. The default below puts it on the workspace
+# disk (typically faster than $HOME). Set to "$HOME/.m2/repository" or
+# any absolute path to use a different location. The bootstrap only
+# affects builds it invokes — to make the IDE / manual gradle / mvn
+# also use this path, add to ~/.m2/settings.xml:
+#   <settings><localRepository>/work/.m2/repository</localRepository></settings>
+m2_repo = "/work/.m2/repository"
+
 # JVM distribution (sdkman identifier). 21-tem is also supported.
 jdk = "25-tem"
 

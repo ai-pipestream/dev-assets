@@ -44,6 +44,7 @@ class Repo:
 @dataclass(frozen=True)
 class Workspace:
     root: Path
+    m2_repo: Path
     jdk: str
     clone_protocol: str
     parallelism: int
@@ -101,6 +102,13 @@ def load() -> Workspace:
     ws = cfg.get("workspace", {})
     root = Path(str(ws.get("root", "/work"))).expanduser()
 
+    m2_str = str(ws.get("m2_repo", "")).strip()
+    if m2_str:
+        m2_repo = Path(m2_str).expanduser()
+    else:
+        # default: <home>/.m2/repository (the maven convention)
+        m2_repo = Path.home() / ".m2" / "repository"
+
     repos = tuple(
         Repo(
             path=r["path"],
@@ -113,6 +121,7 @@ def load() -> Workspace:
 
     return Workspace(
         root=root,
+        m2_repo=m2_repo,
         jdk=str(ws.get("jdk", "25-tem")),
         clone_protocol=str(ws.get("clone_protocol", "https")),
         parallelism=int(ws.get("parallelism", 8)),

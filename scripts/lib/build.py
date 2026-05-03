@@ -26,10 +26,13 @@ def build_seed(ws: Workspace) -> int:
         ui.warn("No build_first repos in manifest — nothing to seed.")
         return 0
 
+    ws.m2_repo.mkdir(parents=True, exist_ok=True)
+
     ui.header("Maven local seed build")
     ui.info(f"Gradle task:  {_GRADLE_TASK}")
     ui.info(f"Seed repos:   {len(seeds)} ({', '.join(r.name for r in seeds)})")
     ui.info(f"JAVA_HOME:    {_resolve_java_home() or '(not pinned)'}")
+    ui.info(f"Maven local:  {ws.m2_repo}")
     ui.plain("")
 
     for repo in seeds:
@@ -38,7 +41,12 @@ def build_seed(ws: Workspace) -> int:
             return rc
 
     ui.plain("")
-    ui.ok(f"All {len(seeds)} seed build(s) published to ~/.m2.")
+    ui.ok(f"All {len(seeds)} seed build(s) published to {ws.m2_repo}.")
+    if ws.m2_repo != Path.home() / ".m2" / "repository":
+        ui.plain("")
+        ui.info("To make IDEs / manual `mvn` / `gradle` use this same location,")
+        ui.info("add to ~/.m2/settings.xml:")
+        ui.info(f"  <settings><localRepository>{ws.m2_repo}</localRepository></settings>")
     return 0
 
 
@@ -77,7 +85,8 @@ def _build_one(repo: Repo, ws: Workspace) -> int:
         env["PATH"] = f"{java_home}/bin:{env.get('PATH', '')}"
 
     res = subprocess.run(
-        ["./gradlew", _GRADLE_TASK, "--no-daemon"],
+        ["./gradlew", _GRADLE_TASK, "--no-daemon",
+         f"-Dmaven.repo.local={ws.m2_repo}"],
         cwd=str(dest),
         env=env,
     )
