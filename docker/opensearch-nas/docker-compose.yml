@@ -23,7 +23,7 @@ name: opensearch-nas
 services:
 
   opensearch:
-    image: opensearchproject/opensearch:${OS_VERSION:-3.5.0}
+    image: opensearchproject/opensearch:${OS_VERSION:-3.6.0}
     container_name: opensearch
     hostname: opensearch
     environment:
@@ -70,7 +70,7 @@ services:
     restart: unless-stopped
 
   opensearch-dashboards:
-    image: opensearchproject/opensearch-dashboards:${OS_VERSION:-3.5.0}
+    image: opensearchproject/opensearch-dashboards:${OS_VERSION:-3.6.0}
     container_name: opensearch-dashboards
     depends_on:
       opensearch:
@@ -88,7 +88,7 @@ services:
   # Re-runs cheaply on every stack restart — PUT _index_template is
   # idempotent. Specific user templates with higher priority always win.
   init-templates:
-    image: curlimages/curl:8.10.1
+    image: curlimages/curl:8.20.0
     depends_on:
       opensearch:
         condition: service_healthy

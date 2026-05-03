@@ -6,7 +6,7 @@ ai-pipestream LAN NAS and serve every dev machine on the network.
 ## What's in here
 
 - `docker-compose.yml` — three services:
-  - `opensearch` — OpenSearch 3.5.0, 32 GB heap, security disabled, mlockall on
+  - `opensearch` — OpenSearch 3.6.0, 32 GB heap, security disabled, mlockall on
   - `opensearch-dashboards` — UI on port 5601
   - `init-templates` — one-shot sidecar that applies a low-priority default
     index template (6 shards / 0 replicas / 30 s refresh / best_compression)
@@ -26,7 +26,7 @@ and add shards.
    at this dev-assets repo).
 2. Paste `docker-compose.yml` into the editor.
 3. (Optional) under **Environment variables**, set any of:
-   - `OS_VERSION` — image tag, default `3.5.0`
+   - `OS_VERSION` — image tag, default `3.6.0`
    - `OS_HEAP` — JVM heap, default `32g` (don't exceed 32 g — compressed-oops cutoff)
    - `OS_DEFAULT_SHARDS` — primary shards per new index, default `6`
    - `OS_DEFAULT_REPLICAS` — replicas per new index, default `0`
