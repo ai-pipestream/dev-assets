@@ -57,6 +57,10 @@ services:
     volumes:
       - opensearch-data:/usr/share/opensearch/data
     ports:
+      # Direct LAN ports — kept alongside the Traefik HTTPS route for
+      # tools that prefer talking to OpenSearch by IP/port (faster, no
+      # proxy hop). Comment these out if you want LAN access only via
+      # the Traefik hostname.
       - "${OS_REST_PORT:-9200}:9200"
       - "${OS_PERF_PORT:-9600}:9600"
     healthcheck:
@@ -67,6 +71,16 @@ services:
       timeout: 5s
       retries: 30
       start_period: 60s
+    networks:
+      - default
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-traefik_network}"
+      - "traefik.http.routers.opensearch.rule=Host(`${OS_HOSTNAME:-opensearch.rokkon.com}`)"
+      - "traefik.http.routers.opensearch.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.opensearch.tls=true"
+      - "traefik.http.services.opensearch.loadbalancer.server.port=9200"
     restart: unless-stopped
 
   opensearch-dashboards:
@@ -81,6 +95,16 @@ services:
       SERVER_NAME: opensearch-dashboards
     ports:
       - "${OS_DASHBOARDS_PORT:-5601}:5601"
+    networks:
+      - default
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:-traefik_network}"
+      - "traefik.http.routers.opensearch-dashboards.rule=Host(`${OS_DASHBOARDS_HOSTNAME:-opensearch-dashboards.rokkon.com}`)"
+      - "traefik.http.routers.opensearch-dashboards.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.opensearch-dashboards.tls=true"
+      - "traefik.http.services.opensearch-dashboards.loadbalancer.server.port=5601"
     restart: unless-stopped
 
   # One-shot init: applies a low-priority default index template so any
@@ -152,3 +176,16 @@ services:
 volumes:
   opensearch-data:
     driver: local
+
+networks:
+  # Internal network for opensearch <-> dashboards <-> init-templates.
+  default:
+
+  # Shared traefik network so the proxy can reach opensearch:9200 and
+  # opensearch-dashboards:5601 by container name. The network is created
+  # by the traefik stack with `name: traefik_network` (no compose-project
+  # prefix), so we attach to it as external. Override TRAEFIK_NETWORK in
+  # Portainer's env vars if your traefik network has a different name.
+  traefik:
+    external: true
+    name: ${TRAEFIK_NETWORK:-traefik_network}
