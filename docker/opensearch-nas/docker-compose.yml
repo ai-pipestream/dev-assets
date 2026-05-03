@@ -90,9 +90,16 @@ services:
       opensearch:
         condition: service_healthy
     environment:
-      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      # Triggers the entrypoint to physically remove the security plugin
+      # bundle from disk on first boot.
       DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
-      SERVER_NAME: opensearch-dashboards
+    # Inline dashboards config — env-var → yml conversion isn't reliable
+    # for keys with literal underscores (data_source, opensearch_security),
+    # so we ship the full file via a compose config.
+    configs:
+      - source: dashboards-yml
+        target: /usr/share/opensearch-dashboards/config/opensearch_dashboards.yml
+        mode: 0444
     ports:
       - "${OS_DASHBOARDS_PORT:-5601}:5601"
     networks:
@@ -176,6 +183,23 @@ services:
 volumes:
   opensearch-data:
     driver: local
+
+configs:
+  # Inlined opensearch_dashboards.yml — keeps the stack to a single file
+  # that you can paste straight into Portainer. Edit here to flip features
+  # on/off; redeploy the stack to apply.
+  dashboards-yml:
+    content: |
+      server.host: "0.0.0.0"
+      server.name: opensearch-dashboards
+      opensearch.hosts: ["http://opensearch:9200"]
+      opensearch.ssl.verificationMode: none
+
+      # Latest-and-greatest features the dashboards UI suggests enabling
+      # on first startup — all additive, no breaking behavior.
+      data_source.enabled: true     # multi-cluster: switch between NAS + AWS-managed once you migrate
+      workspace.enabled: true       # workspaces: organize saved objects by team/project/index family
+      explore.enabled: true         # newer Explore UI alongside Discover
 
 networks:
   # Internal network for opensearch <-> dashboards <-> init-templates.
