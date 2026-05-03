@@ -200,3 +200,136 @@ name = "quarkus-grpc-gatherer"
 [[repo]]
 path = "main/dev-tools"
 name = "quarkus-buf-grpc-generator"
+
+
+# ============================================================================
+# Reference-code manifest
+# ============================================================================
+# OSS upstream clones used for grep, learning, and contributing patches.
+# These land at <root>/main/reference-code/<name>. They are NEVER built
+# and are NOT cloned by `clone` — only by `reference-sync`.
+#
+# Fields:
+#   name     required  destination directory name
+#   url      required  full git URL (any host, public)
+#   branch   optional  default = remote default branch
+#
+# Note: a user-override `~/.config/ai-pipestream/workspace.toml` containing
+# its own [[ref_repo]] table fully REPLACES this list (TOML array semantics).
+# To add a single repo, copy this list into your override and append.
+
+# ---- Quarkus + extensions used by the platform -------------------------
+[[ref_repo]]
+name = "quarkus"
+url = "https://github.com/quarkusio/quarkus.git"
+
+[[ref_repo]]
+name = "quarkus-amazon-services"
+url = "https://github.com/quarkiverse/quarkus-amazon-services.git"
+
+[[ref_repo]]
+name = "quarkus-docling"
+url = "https://github.com/quarkiverse/quarkus-docling.git"
+
+[[ref_repo]]
+name = "quarkus-opensearch"
+url = "https://github.com/quarkiverse/quarkus-opensearch.git"
+
+[[ref_repo]]
+name = "quarkus-quinoa"
+url = "https://github.com/quarkiverse/quarkus-quinoa.git"
+
+# ---- SmallRye / reactive --------------------------------------------------
+[[ref_repo]]
+name = "smallrye-mutiny"
+url = "https://github.com/smallrye/smallrye-mutiny.git"
+
+[[ref_repo]]
+name = "smallrye-reactive-messaging"
+url = "https://github.com/smallrye/smallrye-reactive-messaging.git"
+
+# ---- Vert.x --------------------------------------------------------------
+[[ref_repo]]
+name = "vert.x"
+url = "https://github.com/eclipse-vertx/vert.x.git"
+
+[[ref_repo]]
+name = "vertx-grpc"
+url = "https://github.com/eclipse-vertx/vertx-grpc.git"
+branch = "4.x"
+
+# ---- Apicurio / schema registry -----------------------------------------
+[[ref_repo]]
+name = "apicurio-registry"
+url = "https://github.com/Apicurio/apicurio-registry.git"
+
+# ---- DJL / embeddings ----------------------------------------------------
+[[ref_repo]]
+name = "djl"
+url = "https://github.com/deepjavalibrary/djl.git"
+
+[[ref_repo]]
+name = "djl-serving"
+url = "https://github.com/deepjavalibrary/djl-serving.git"
+
+[[ref_repo]]
+name = "langchain4j"
+url = "https://github.com/langchain4j/langchain4j.git"
+
+# ---- Document parsing / Tika --------------------------------------------
+[[ref_repo]]
+name = "tika"
+url = "https://github.com/apache/tika.git"
+
+[[ref_repo]]
+name = "docling-java"
+url = "https://github.com/docling-project/docling-java.git"
+
+# ---- NLP -----------------------------------------------------------------
+# Pinned to ai-pipestream's fork because that's where the in-flight
+# thread-safety patches live; switch to apache/opennlp once merged.
+[[ref_repo]]
+name = "opennlp"
+url = "https://github.com/ai-pipestream/opennlp.git"
+
+# ---- Persistence + clustering -------------------------------------------
+[[ref_repo]]
+name = "hibernate-orm"
+url = "https://github.com/hibernate/hibernate-orm.git"
+
+[[ref_repo]]
+name = "scalecube-cluster"
+url = "https://github.com/scalecube/scalecube-cluster.git"
+
+# ---- Frontend / forms ---------------------------------------------------
+[[ref_repo]]
+name = "jsonforms"
+url = "https://github.com/eclipsesource/jsonforms.git"
+
+[[ref_repo]]
+name = "json-schema-validator"
+url = "https://github.com/networknt/json-schema-validator.git"
+
+# ---- Testing -------------------------------------------------------------
+[[ref_repo]]
+name = "awaitility"
+url = "https://github.com/awaitility/awaitility.git"
+
+# ---- Storage -------------------------------------------------------------
+[[ref_repo]]
+name = "seaweedfs"
+url = "https://github.com/seaweedfs/seaweedfs.git"
+
+# ---- Build / publish tooling --------------------------------------------
+[[ref_repo]]
+name = "axion-release-plugin"
+url = "https://github.com/allegro/axion-release-plugin.git"
+
+# ---- IDE / IntelliJ plugin reference (multi-GB clones — be patient) ----
+[[ref_repo]]
+name = "intellij-community"
+url = "https://github.com/JetBrains/intellij-community.git"
+
+[[ref_repo]]
+name = "intellij-platform-gradle-plugin"
+url = "https://github.com/JetBrains/intellij-platform-gradle-plugin.git"

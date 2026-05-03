@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import ui
-from .manifest import Repo, Workspace
+from .manifest import RefRepo, Repo, Workspace
 
 
 @dataclass(frozen=True)
@@ -139,6 +139,128 @@ def _print_result(r: Result, root: Path) -> None:
         ui.info(f"skipped  {rel}{('  ' + r.detail) if r.detail else ''}")
     elif r.action == "would-clone":
         ui.plain(f"        would-clone   {rel}")
+    elif r.action == "would-update":
+        ui.plain(f"        would-update  {rel}")
+    elif r.action == "failed":
+        ui.error(f"failed   {rel}  {r.detail}")
+
+
+@dataclass(frozen=True)
+class RefResult:
+    ref: RefRepo
+    action: str
+    detail: str = ""
+
+
+def _clone_ref(ref: RefRepo, dest: Path) -> RefResult:
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    cmd = ["git", "clone"]
+    if ref.branch:
+        cmd += ["--branch", ref.branch]
+    cmd += [ref.url, str(dest)]
+    res = subprocess.run(cmd, capture_output=True, text=True)
+    if res.returncode == 0:
+        detail = f"(branch {ref.branch})" if ref.branch else ""
+        return RefResult(ref, "cloned", detail)
+    err = (res.stderr or "").strip()
+    if ref.branch and ("not found" in err.lower() or "Remote branch" in err):
+        retry = subprocess.run(
+            ["git", "clone", ref.url, str(dest)],
+            capture_output=True, text=True,
+        )
+        if retry.returncode == 0:
+            return RefResult(ref, "cloned", "(remote default branch)")
+        return RefResult(ref, "failed", _last_line(retry.stderr) or "clone failed")
+    return RefResult(ref, "failed", _last_line(err) or "clone failed")
+
+
+def _update_ref(ref: RefRepo, dest: Path) -> RefResult:
+    fetch = subprocess.run(
+        ["git", "-C", str(dest), "fetch", "--all", "--prune"],
+        capture_output=True, text=True,
+    )
+    if fetch.returncode != 0:
+        return RefResult(ref, "failed", "fetch failed: " + _last_line(fetch.stderr))
+    pull = subprocess.run(
+        ["git", "-C", str(dest), "pull", "--ff-only"],
+        capture_output=True, text=True,
+    )
+    if pull.returncode != 0:
+        return RefResult(ref, "skipped", "ff-only pull declined (local changes?)")
+    if "Already up to date" in (pull.stdout + pull.stderr):
+        return RefResult(ref, "updated", "already up-to-date")
+    return RefResult(ref, "updated")
+
+
+def _process_ref(ref: RefRepo, ws: Workspace, mode: str) -> RefResult:
+    dest = ref.dest(ws.root)
+    if _is_git_repo(dest):
+        if mode == "list":
+            return RefResult(ref, "would-update" if mode == "update" else "skipped",
+                             "exists")
+        if mode == "update":
+            return _update_ref(ref, dest)
+        return RefResult(ref, "skipped", "exists")
+    if mode == "list":
+        return RefResult(ref, "would-clone", ref.url)
+    return _clone_ref(ref, dest)
+
+
+def sync_refs(ws: Workspace, mode: str = "clone") -> int:
+    """Sync reference-code repos in parallel.
+
+    These are OSS upstream clones (Quarkus, Vert.x, Tika, etc.) used for
+    grep / patch workflows. They are NOT part of any platform build.
+    """
+    if not ws.ref_repos:
+        ui.error("No ref_repos in manifest.")
+        return 1
+
+    ui.header(f"Reference-code sync ({mode})")
+    ui.info(f"Workspace root:  {ws.root}")
+    ui.info(f"Destination:     {ws.root / RefRepo.REF_PATH}")
+    ui.info(f"Parallelism:     {ws.parallelism}")
+    ui.info(f"Refs:            {len(ws.ref_repos)}")
+    ui.plain("")
+
+    results: list[RefResult] = []
+    with ThreadPoolExecutor(max_workers=ws.parallelism) as ex:
+        futures = {ex.submit(_process_ref, r, ws, mode): r for r in ws.ref_repos}
+        for fut in as_completed(futures):
+            res = fut.result()
+            results.append(res)
+            _print_ref_result(res)
+
+    ui.plain("")
+    ui.header("Summary")
+    counts: dict[str, int] = {}
+    for r in results:
+        counts[r.action] = counts.get(r.action, 0) + 1
+    for action in ("cloned", "updated", "skipped", "would-clone", "would-update", "failed"):
+        n = counts.get(action, 0)
+        if n:
+            ui.plain(f"  {action:14s} {n}")
+
+    if counts.get("failed", 0):
+        ui.plain("")
+        ui.error("Some operations failed:")
+        for r in results:
+            if r.action == "failed":
+                ui.error(f"  {r.ref.relative_dest()}: {r.detail}")
+        return 1
+    return 0
+
+
+def _print_ref_result(r: RefResult) -> None:
+    rel = r.ref.relative_dest()
+    if r.action == "cloned":
+        ui.ok(f"cloned   {rel}{('  ' + r.detail) if r.detail else ''}")
+    elif r.action == "updated":
+        ui.ok(f"updated  {rel}{('  ' + r.detail) if r.detail else ''}")
+    elif r.action == "skipped":
+        ui.info(f"skipped  {rel}{('  ' + r.detail) if r.detail else ''}")
+    elif r.action == "would-clone":
+        ui.plain(f"        would-clone   {rel}  ({r.detail})")
     elif r.action == "would-update":
         ui.plain(f"        would-update  {rel}")
     elif r.action == "failed":

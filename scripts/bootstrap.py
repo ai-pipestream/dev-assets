@@ -2,15 +2,15 @@
 """ai-pipestream workspace bootstrap.
 
 Subcommands implemented:
-  check     Detect prereqs and offer to install missing ones.
-  clone     Clone all platform repos per config/workspace.toml.
-  build     Build seed repos (publishToMavenLocal) to warm ~/.m2.
-  seed      Seed ~/.pipeline/ from the platform extension's resources.
-  dev-up    Start the process-compose dev stack.
-  dev-down  Stop the process-compose dev stack.
+  check           Detect prereqs and offer to install missing ones.
+  clone           Clone all platform repos per config/workspace.toml.
+  build           Build seed repos (publishToMavenLocal) to warm ~/.m2.
+  seed            Seed ~/.pipeline/ from the platform extension's resources.
+  dev-up          Start the process-compose dev stack.
+  dev-down        Stop the process-compose dev stack.
+  reference-sync  Clone/update the reference-code repos (OSS upstreams).
 
 Subcommands planned:
-  reference-sync  Clone/update the reference-code repos.
   all             Run check -> clone -> build -> seed -> dev-up smoke test.
 
 Run `./bootstrap.sh <subcommand> --help` for per-subcommand options.
@@ -68,6 +68,17 @@ def cmd_dev_up(args: argparse.Namespace) -> int:
 
 def cmd_dev_down(args: argparse.Namespace) -> int:
     return dev_compose.down()
+
+
+def cmd_reference_sync(args: argparse.Namespace) -> int:
+    ws = manifest.load()
+    if args.list:
+        mode = "list"
+    elif args.update:
+        mode = "update"
+    else:
+        mode = "clone"
+    return git_sync.sync_refs(ws, mode=mode)
 
 
 def main() -> int:
@@ -144,6 +155,21 @@ def main() -> int:
         help="Stop the process-compose dev stack",
     )
     p_down.set_defaults(func=cmd_dev_down)
+
+    p_ref = sub.add_parser(
+        "reference-sync",
+        help="Clone/update reference-code repos (OSS upstreams)",
+        description="Clone every [[ref_repo]] from config/workspace.toml into "
+                    "<workspace.root>/main/reference-code/<name>. These are "
+                    "OSS upstreams (Quarkus, Vert.x, Tika, etc.) used for "
+                    "grep / patch workflows; they're never built. Idempotent: "
+                    "existing clones are skipped (or fast-forwarded with --update).",
+    )
+    p_ref.add_argument("--list", action="store_true",
+                       help="Dry run — print what would happen, don't clone")
+    p_ref.add_argument("--update", action="store_true",
+                       help="Also fast-forward existing clones (default: skip existing)")
+    p_ref.set_defaults(func=cmd_reference_sync)
 
     args = parser.parse_args()
     try:

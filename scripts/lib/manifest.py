@@ -42,6 +42,25 @@ class Repo:
 
 
 @dataclass(frozen=True)
+class RefRepo:
+    """An OSS reference repo — full git URL, never built, lives at
+    <root>/main/reference-code/<name>. Vendored for grep / upstream-patch
+    workflows; not part of any platform build.
+    """
+    name: str
+    url: str
+    branch: str = ""    # "" = remote default branch
+
+    REF_PATH = "main/reference-code"
+
+    def dest(self, root: Path) -> Path:
+        return root / self.REF_PATH / self.name
+
+    def relative_dest(self) -> str:
+        return f"{self.REF_PATH}/{self.name}"
+
+
+@dataclass(frozen=True)
 class Workspace:
     root: Path
     m2_repo: Path
@@ -50,6 +69,7 @@ class Workspace:
     parallelism: int
     github_org: str
     repos: tuple[Repo, ...]
+    ref_repos: tuple[RefRepo, ...]
 
     def repo_named(self, name: str) -> Repo | None:
         for r in self.repos:
@@ -119,6 +139,15 @@ def load() -> Workspace:
         for r in cfg.get("repo", [])
     )
 
+    ref_repos = tuple(
+        RefRepo(
+            name=r["name"],
+            url=r["url"],
+            branch=r.get("branch", ""),
+        )
+        for r in cfg.get("ref_repo", [])
+    )
+
     return Workspace(
         root=root,
         m2_repo=m2_repo,
@@ -127,4 +156,5 @@ def load() -> Workspace:
         parallelism=int(ws.get("parallelism", 8)),
         github_org=str(ws.get("github_org", "ai-pipestream")),
         repos=repos,
+        ref_repos=ref_repos,
     )
