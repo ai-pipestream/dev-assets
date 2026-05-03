@@ -1,0 +1,37 @@
+#!/bin/bash
+# Tiny wrapper that brings the shared dev infra (Consul, Postgres, Kafka,
+# Apicurio, OpenSearch, SeaweedFS, Redis, etc.) up or down via docker compose.
+#
+# process-compose.yaml invokes this as `dev-services up` and `dev-services down`.
+# Symlinked into ~/.local/bin/ by the dev-assets seed step.
+
+set -euo pipefail
+
+COMPOSE_FILE="${COMPOSE_FILE:-${HOME}/.pipeline/compose-devservices.yml}"
+COMMAND="${1:-}"
+
+if [[ -z "$COMMAND" ]]; then
+    echo "Usage: $0 [up|down]" >&2
+    exit 1
+fi
+
+FILES=(-f "$COMPOSE_FILE")
+OVERRIDE_FILE="${COMPOSE_FILE%.yml}.override.yml"
+if [[ -f "$OVERRIDE_FILE" ]]; then
+    FILES+=(-f "$OVERRIDE_FILE")
+fi
+
+case "$COMMAND" in
+    up)
+        echo "Starting dev services from $COMPOSE_FILE..."
+        docker compose "${FILES[@]}" up -d
+        ;;
+    down)
+        echo "Stopping dev services from $COMPOSE_FILE..."
+        docker compose "${FILES[@]}" down
+        ;;
+    *)
+        echo "Invalid command: $COMMAND. Use 'up' or 'down'." >&2
+        exit 1
+        ;;
+esac

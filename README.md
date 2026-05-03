@@ -39,7 +39,26 @@ Content will be organized into subdirectories as the repository grows:
 
 ## Getting Started
 
-Check the `/docs` directory for setup guides and tutorials for getting started with io-pipeline development.
+Bootstrap a fresh developer machine:
+
+```bash
+git clone https://github.com/ai-pipestream/dev-assets /work/main/dev-tools/dev-assets
+cd /work/main/dev-tools/dev-assets
+./bootstrap.sh check          # detect + offer to install prereqs
+```
+
+`./bootstrap.sh` is a thin bash entry-point that finds Python 3.11+ and
+hands off to `scripts/bootstrap.py`. Configuration lives in
+`config/workspace.toml`; per-machine overrides go in
+`~/.config/ai-pipestream/workspace.toml`.
+
+Subcommands (more land as later phases ship):
+- `check` — detect required tools, offer to install missing ones
+- `clone` — *(planned)* clone every platform repo from the manifest
+- `build` — *(planned)* build pipestream-platform → maven local
+- `dev-up` / `dev-down` — *(planned)* wrap process-compose
+
+For deeper guides see `/docs`, in particular `/docs/standards/`.
 
 ## Contributing
 

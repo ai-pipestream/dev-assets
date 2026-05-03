@@ -1,0 +1,202 @@
+# ai-pipestream workspace configuration.
+#
+# Source of truth for: workspace root, JDK version, repo manifest.
+# Per-machine overrides go in $XDG_CONFIG_HOME/ai-pipestream/workspace.toml
+# (defaults to ~/.config/ai-pipestream/workspace.toml). Override file fields
+# are merged on top of these defaults.
+
+[workspace]
+# Workspace root. Repos are cloned under <root>/<path>/<name>.
+# The agreed layout: <root>/main/<category>/<repo> for canonical-branch
+# checkouts and <root>/worktrees/ for in-progress branch worktrees.
+root = "/work"
+
+# Maven local repository. The default below puts it on the workspace
+# disk (typically faster than $HOME). Set to "$HOME/.m2/repository" or
+# any absolute path to use a different location. The bootstrap only
+# affects builds it invokes — to make the IDE / manual gradle / mvn
+# also use this path, add to ~/.m2/settings.xml:
+#   <settings><localRepository>/work/.m2/repository</localRepository></settings>
+m2_repo = "/work/.m2/repository"
+
+# JVM distribution (sdkman identifier). 21-tem is also supported.
+jdk = "25-tem"
+
+# Git protocol when cloning. Override per-run with --ssh / --https.
+clone_protocol = "https"
+
+# Parallel git clones during the bootstrap clone phase.
+parallelism = 8
+
+# GitHub org all platform repos live under.
+github_org = "ai-pipestream"
+
+
+# ============================================================================
+# Repo manifest
+# ============================================================================
+# Each [[repo]] entry produces:
+#   <root>/<path>/<name>
+#
+# Fields:
+#   path          required  destination directory under <root>
+#   name          required  GitHub repo name under <github_org>
+#   branch        optional  default "main"
+#   build_first   optional  default false; if true, this repo is built
+#                           SERIALLY before any parallel build starts
+#                           (used to warm ~/.m2 and prevent gradle races)
+#
+# To add a new repo: add a [[repo]] block, commit, and re-run
+#   ./bootstrap.sh clone --update
+# To remove a repo from the bootstrap, delete its block — existing on-disk
+# clones are left alone (only the bootstrap stops touching them).
+
+# ---- core-services -----------------------------------------------------
+# The platform foundation. pipestream-platform is built first to seed
+# ~/.m2/repository so the parallel gradle builds in the rest of the tree
+# don't race when first compiling.
+[[repo]]
+path = "main/core-services"
+name = "pipestream-platform"
+build_first = true
+
+[[repo]]
+path = "main/core-services"
+name = "pipestream-protos"
+
+[[repo]]
+path = "main/core-services"
+name = "platform-registration-service"
+
+[[repo]]
+path = "main/core-services"
+name = "account-service"
+
+[[repo]]
+path = "main/core-services"
+name = "connector-admin"
+
+[[repo]]
+path = "main/core-services"
+name = "connector-intake-service"
+
+[[repo]]
+path = "main/core-services"
+name = "repository-service"
+
+[[repo]]
+path = "main/core-services"
+name = "pipestream-engine"
+
+[[repo]]
+path = "main/core-services"
+name = "pipestream-engine-kafka-sidecar"
+
+[[repo]]
+path = "main/core-services"
+name = "pipestream-opensearch"
+
+[[repo]]
+path = "main/core-services"
+name = "pipestream-opensearch-client"
+
+[[repo]]
+path = "main/core-services"
+name = "pipestream-wiremock-server"
+
+[[repo]]
+path = "main/core-services"
+name = "sample-documents"
+
+[[repo]]
+path = "main/core-services"
+name = "tika4-shaded"
+
+# ---- core-services/embedders -------------------------------------------
+# Drop-in backends for module-embedder. DJL targets NVIDIA; OpenVINO
+# targets IBM B70 Pro and CPU.
+[[repo]]
+path = "main/core-services/embedders"
+name = "pipestream-embedder-djl"
+
+[[repo]]
+path = "main/core-services/embedders"
+name = "pipestream-embedder-openvino"
+
+# ---- modules ------------------------------------------------------------
+# gRPC pipeline processors. Each implements the module contract from
+# pipestream-protos.
+[[repo]]
+path = "main/modules"
+name = "module-chunker"
+
+[[repo]]
+path = "main/modules"
+name = "module-parser"
+
+[[repo]]
+path = "main/modules"
+name = "module-embedder"
+
+[[repo]]
+path = "main/modules"
+name = "module-echo"
+
+[[repo]]
+path = "main/modules"
+name = "module-opensearch-sink"
+
+[[repo]]
+path = "main/modules"
+name = "module-proxy"
+
+[[repo]]
+path = "main/modules"
+name = "module-semantic-graph"
+
+[[repo]]
+path = "main/modules"
+name = "module-testing-sidecar"
+
+# ---- connectors ---------------------------------------------------------
+# Source connectors that feed documents into the pipeline.
+[[repo]]
+path = "main/connectors"
+name = "jdbc-connector"
+
+[[repo]]
+path = "main/connectors"
+name = "s3-connector"
+
+# ---- frontend -----------------------------------------------------------
+# pnpm + Vue/Vuetify. Process-compose does not start it (yet).
+[[repo]]
+path = "main/frontend"
+name = "pipestream-frontend"
+
+# ---- dev-tools ----------------------------------------------------------
+# This repo (dev-assets) plus the test infra and the build plugins we
+# maintain in-house.
+[[repo]]
+path = "main/dev-tools"
+name = "dev-assets"
+
+[[repo]]
+path = "main/dev-tools"
+name = "docker-integration-tests"
+
+[[repo]]
+path = "main/dev-tools"
+name = "pipestream-data-generator"
+
+[[repo]]
+path = "main/dev-tools"
+name = "corpus-data"
+
+[[repo]]
+path = "main/dev-tools"
+name = "quarkus-grpc-gatherer"
+
+[[repo]]
+path = "main/dev-tools"
+name = "quarkus-buf-grpc-generator"
