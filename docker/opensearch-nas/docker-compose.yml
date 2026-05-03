@@ -23,7 +23,7 @@ name: opensearch-nas
 services:
 
   opensearch:
-    image: opensearchproject/opensearch:${OS_VERSION:-3.5.0}
+    image: opensearchproject/opensearch:${OS_VERSION:-3.6.0}
     container_name: opensearch
     hostname: opensearch
     environment:
