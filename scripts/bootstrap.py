@@ -4,9 +4,9 @@
 Subcommands implemented:
   check    Detect prereqs and offer to install missing ones.
   clone    Clone all platform repos per config/workspace.toml.
+  build    Build seed repos (publishToMavenLocal) to warm ~/.m2.
 
 Subcommands planned:
-  build           Build pipestream-platform -> ~/.m2 (publishToMavenLocal).
   dev-up          Start the process-compose dev stack.
   dev-down        Stop the process-compose dev stack.
   reference-sync  Clone/update the reference-code repos.
@@ -21,7 +21,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from lib import git_sync, manifest, prereqs, ui
+from lib import build, git_sync, manifest, prereqs, ui
 
 
 def cmd_check(args: argparse.Namespace) -> int:
@@ -49,6 +49,11 @@ def cmd_clone(args: argparse.Namespace) -> int:
     if rc == 0 and mode in ("clone", "update"):
         git_sync.maybe_dev_assets_relocation_notice(ws)
     return rc
+
+
+def cmd_build(args: argparse.Namespace) -> int:
+    ws = manifest.load()
+    return build.build_seed(ws)
 
 
 def main() -> int:
@@ -86,6 +91,16 @@ def main() -> int:
     proto.add_argument("--https", action="store_true",
                        help="Use HTTPS clone URLs (default per workspace.toml)")
     p_clone.set_defaults(func=cmd_clone)
+
+    p_build = sub.add_parser(
+        "build",
+        help="Build seed repos (publishToMavenLocal) to warm ~/.m2",
+        description="Run `./gradlew publishToMavenLocal` SERIALLY on every "
+                    "build_first=true repo in the manifest. This warms "
+                    "~/.m2 so subsequent parallel gradle builds in other "
+                    "services don't race writing the same dependencies.",
+    )
+    p_build.set_defaults(func=cmd_build)
 
     args = parser.parse_args()
     try:
