@@ -1,0 +1,154 @@
+# OpenSearch single-node stack tuned for bulk-ingest on a NAS host.
+#
+# Designed for the ai-pipestream LAN: krick + dev machines connect to this
+# instance (typically at 192.168.1.x:9200) instead of running their own.
+#
+# Sizing assumptions: 64 GB host RAM, large HDD. Defaults below give:
+#   - 32 GB JVM heap (max for compressed-oops)
+#   - 32 GB left for OS to use as Lucene mmap cache
+#   - 6 shards / 0 replicas / 30s refresh on new indexes (template below)
+#
+# Why single-node, not 3-node-on-one-host: multiple OS instances on the
+# same physical box compete for the same CPU/disk/RAM and add localhost
+# coordination overhead — slower than one tuned node, not faster.
+# Multi-node only buys you HA across separate hardware (which you don't
+# have here) or a testbed for shard-rebalancing behavior (separate concern).
+#
+# Deploy via Portainer: paste this file into a stack, set the env vars
+# below if you want non-defaults, point the volume at your data drive
+# (see "DATA VOLUME" section at the bottom), and deploy.
+
+name: opensearch-nas
+
+services:
+
+  opensearch:
+    image: opensearchproject/opensearch:${OS_VERSION:-3.5.0}
+    container_name: opensearch
+    hostname: opensearch
+    environment:
+      cluster.name: ${OS_CLUSTER_NAME:-pipestream-nas}
+      node.name: ${OS_NODE_NAME:-opensearch-nas}
+      discovery.type: single-node
+      bootstrap.memory_lock: "true"
+      DISABLE_SECURITY_PLUGIN: "true"
+      DISABLE_INSTALL_DEMO_CONFIG: "true"
+      # Heap. Stay <= 32g so the JVM keeps compressed-oops enabled.
+      OPENSEARCH_JAVA_OPTS: "-Xms${OS_HEAP:-32g} -Xmx${OS_HEAP:-32g}"
+      # Bulk-ingest tuning. 30% of heap for the indexing buffer, big write
+      # queue so we don't reject during burst loads.
+      indices.memory.index_buffer_size: "30%"
+      thread_pool.write.queue_size: "1000"
+      # Allow lots of shards on this single node (default cap is 1000;
+      # with 6 shards/index that's only ~166 indexes — bump if needed).
+      cluster.max_shards_per_node: "10000"
+      # Cluster is read-only above 95% disk; warn at 85%. Defaults are
+      # tighter — relax slightly since we have a giant drive.
+      cluster.routing.allocation.disk.watermark.low: "85%"
+      cluster.routing.allocation.disk.watermark.high: "92%"
+      cluster.routing.allocation.disk.watermark.flood_stage: "97%"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    ports:
+      - "${OS_REST_PORT:-9200}:9200"
+      - "${OS_PERF_PORT:-9600}:9600"
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "curl -sf http://localhost:9200/_cluster/health | grep -qE '\"status\":\"(green|yellow)\"'"
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+    restart: unless-stopped
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:${OS_VERSION:-3.5.0}
+    container_name: opensearch-dashboards
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
+      SERVER_NAME: opensearch-dashboards
+    ports:
+      - "${OS_DASHBOARDS_PORT:-5601}:5601"
+    restart: unless-stopped
+
+  # One-shot init: applies a low-priority default index template so any
+  # newly-created index gets the bulk-ingest-friendly defaults below.
+  # Re-runs cheaply on every stack restart — PUT _index_template is
+  # idempotent. Specific user templates with higher priority always win.
+  init-templates:
+    image: curlimages/curl:8.10.1
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    environment:
+      OS_DEFAULT_SHARDS: "${OS_DEFAULT_SHARDS:-6}"
+      OS_DEFAULT_REPLICAS: "${OS_DEFAULT_REPLICAS:-0}"
+      OS_DEFAULT_REFRESH: "${OS_DEFAULT_REFRESH:-30s}"
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -eu
+        echo "Applying default bulk-ingest index template..."
+        curl -sf -X PUT 'http://opensearch:9200/_index_template/zz-bulk-ingest-defaults' \
+          -H 'Content-Type: application/json' \
+          -d @- <<EOF
+        {
+          "index_patterns": ["*"],
+          "priority": 1,
+          "_meta": {
+            "managed_by": "opensearch-nas docker-compose",
+            "purpose": "low-priority defaults; user templates override"
+          },
+          "template": {
+            "settings": {
+              "index": {
+                "number_of_shards": $${OS_DEFAULT_SHARDS},
+                "number_of_replicas": $${OS_DEFAULT_REPLICAS},
+                "refresh_interval": "$${OS_DEFAULT_REFRESH}",
+                "codec": "best_compression"
+              }
+            }
+          }
+        }
+        EOF
+        echo
+        echo "OK. Verify with:"
+        echo "  curl http://opensearch:9200/_index_template/zz-bulk-ingest-defaults"
+    restart: "no"
+
+# ============================================================================
+# DATA VOLUME — THIS IS WHAT YOU EDIT FOR YOUR NAS
+# ============================================================================
+# By default this creates a Docker-managed named volume. To put the data on
+# your big drive, replace the volume definition with a bind mount:
+#
+#   volumes:
+#     opensearch-data:
+#       driver: local
+#       driver_opts:
+#         type: none
+#         o: bind
+#         device: /volume1/docker/opensearch/data    # <-- your NAS path
+#
+# Or in Portainer's stack editor: under "Volumes" tab, point this volume
+# at your data drive's path before deploying.
+#
+# Make sure the target dir is owned by uid 1000 (the OpenSearch user):
+#   sudo mkdir -p /volume1/docker/opensearch/data
+#   sudo chown -R 1000:1000 /volume1/docker/opensearch/data
+volumes:
+  opensearch-data:
+    driver: local
