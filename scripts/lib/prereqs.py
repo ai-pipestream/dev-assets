@@ -237,10 +237,11 @@ def install_process_compose() -> None:
     target_dir = Path.home() / ".local" / "bin"
     target_dir.mkdir(parents=True, exist_ok=True)
     ui.info(f"Installing process-compose to {target_dir} via official installer...")
+    # The installer's flag is `-b BINDIR` (godownloader convention).
     _run_shell(
         f'curl -fsSL '
         f'https://raw.githubusercontent.com/F1bonacc1/process-compose/main/scripts/get-pc.sh '
-        f'| sh -s -- -d "{target_dir}"'
+        f'| sh -s -- -b "{target_dir}"'
     )
     ui.ok(f"process-compose installed at {target_dir}/process-compose")
 

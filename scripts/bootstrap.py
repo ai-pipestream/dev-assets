@@ -2,15 +2,16 @@
 """ai-pipestream workspace bootstrap.
 
 Subcommands implemented:
-  check    Detect prereqs and offer to install missing ones.
-  clone    Clone all platform repos per config/workspace.toml.
-  build    Build seed repos (publishToMavenLocal) to warm ~/.m2.
+  check     Detect prereqs and offer to install missing ones.
+  clone     Clone all platform repos per config/workspace.toml.
+  build     Build seed repos (publishToMavenLocal) to warm ~/.m2.
+  seed      Seed ~/.pipeline/ from the platform extension's resources.
+  dev-up    Start the process-compose dev stack.
+  dev-down  Stop the process-compose dev stack.
 
 Subcommands planned:
-  dev-up          Start the process-compose dev stack.
-  dev-down        Stop the process-compose dev stack.
   reference-sync  Clone/update the reference-code repos.
-  all             Run check -> clone -> build -> dev-up smoke test.
+  all             Run check -> clone -> build -> seed -> dev-up smoke test.
 
 Run `./bootstrap.sh <subcommand> --help` for per-subcommand options.
 """
@@ -21,7 +22,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from lib import build, git_sync, manifest, prereqs, ui
+from lib import build, dev_compose, git_sync, manifest, prereqs, seed, ui
 
 
 def cmd_check(args: argparse.Namespace) -> int:
@@ -54,6 +55,19 @@ def cmd_clone(args: argparse.Namespace) -> int:
 def cmd_build(args: argparse.Namespace) -> int:
     ws = manifest.load()
     return build.build_seed(ws)
+
+
+def cmd_seed(args: argparse.Namespace) -> int:
+    ws = manifest.load()
+    return seed.seed(ws, dry_run=args.dry_run)
+
+
+def cmd_dev_up(args: argparse.Namespace) -> int:
+    return dev_compose.up(detached=not args.attach)
+
+
+def cmd_dev_down(args: argparse.Namespace) -> int:
+    return dev_compose.down()
 
 
 def main() -> int:
@@ -101,6 +115,35 @@ def main() -> int:
                     "services don't race writing the same dependencies.",
     )
     p_build.set_defaults(func=cmd_build)
+
+    p_seed = sub.add_parser(
+        "seed",
+        help="Seed ~/.pipeline/ from pipestream-platform extension resources",
+        description="Symlink compose/process-compose/scripts from "
+                    "pipestream-platform/pipestream-quarkus-devservices/"
+                    "runtime/src/main/resources/ into ~/.pipeline/ and "
+                    "~/.pipeline/dev/. Also installs the dev-services "
+                    "docker-compose wrapper to ~/.local/bin and generates "
+                    "a default ~/.pipeline/dev/.env if missing.",
+    )
+    p_seed.add_argument("--dry-run", action="store_true",
+                        help="Print what would happen without touching disk")
+    p_seed.set_defaults(func=cmd_seed)
+
+    p_up = sub.add_parser(
+        "dev-up",
+        help="Start the process-compose dev stack",
+        description="Run `process-compose up` against ~/.pipeline/dev/process-compose.yaml.",
+    )
+    p_up.add_argument("--attach", action="store_true",
+                      help="Run process-compose in foreground (default: detached)")
+    p_up.set_defaults(func=cmd_dev_up)
+
+    p_down = sub.add_parser(
+        "dev-down",
+        help="Stop the process-compose dev stack",
+    )
+    p_down.set_defaults(func=cmd_dev_down)
 
     args = parser.parse_args()
     try:
