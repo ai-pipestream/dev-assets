@@ -233,10 +233,10 @@ public class AccountServiceImpl extends MutinyAccountServiceGrpc.AccountServiceI
 
 Rules:
 
-- Extend the generated Mutiny base class (`Mutiny<Service>Grpc.<Service>ImplBase`), never the blocking base class.
-- Return `Uni<T>` for unary, `Multi<T>` for server-streaming. See [`02-mutiny-non-blocking.md`](02-mutiny-non-blocking.md).
+- Extend the generated Mutiny base class (`Mutiny<Service>Grpc.<Service>ImplBase`); the generated unary signatures still return `Uni<T>`. See [`02-virtual-threads.md`](02-virtual-threads.md) for why we keep the `Uni` return but execute the body on a virtual thread instead of composing reactively.
+- Annotate unary methods with `@RunOnVirtualThread` and write the body as plain blocking Java; wrap the final value in `Uni.createFrom().item(...)`. Server-streaming methods still return `Multi<T>` for now (see the streaming section in `02-virtual-threads.md`).
 - Fail with `Status.*.asRuntimeException()`. Never return an HTTP status code. Never throw arbitrary exceptions.
-- Do not add `@Blocking` unless the method genuinely has CPU-bound work. Then see `02-mutiny-non-blocking.md` for how to offload correctly.
+- `@Blocking` is no longer the right offload tool — `@RunOnVirtualThread` replaces it for new code. See [`02-virtual-threads.md`](02-virtual-threads.md).
 
 ### Calling other services — dynamic gRPC
 

@@ -83,7 +83,7 @@ java {
 Rules:
 
 - **Java 21 minimum.** Not 17, not 23 until the platform explicitly moves.
-- **Use virtual threads** for any blocking work that has to happen (see [`02-mutiny-non-blocking.md`](02-mutiny-non-blocking.md)). Prefer `@Blocking` + Quarkus's managed worker pool to explicit `Thread.ofVirtual()` — the platform will grow into virtual thread adoption once Quarkus fully commits.
+- **Virtual threads are the default concurrency model.** Annotate entry-point methods with `@RunOnVirtualThread`; write the body as plain blocking Java. Do not hand-spin `Thread.ofVirtual()` and do not rely on `@Blocking` (a worker-pool offload) for new code. Full canonical patterns and migration recipes in [`02-virtual-threads.md`](02-virtual-threads.md).
 
 ## Port allocations
 
