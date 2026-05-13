@@ -18,8 +18,8 @@ These are **principles + examples**, not CI gates. Where an existing doc in `dev
 ### 01 — Protobufs, Apicurio, and gRPC
 [`01-protobufs-apicurio-grpc.md`](01-protobufs-apicurio-grpc.md). Protos are defined in `pipestream-protos` and consumed via the `quarkus-buf-grpc-generator` Gradle plugin (`pipestreamProtos { }` DSL). Apicurio is 100% PROTOBUF — never JSON, never Avro. Kafka keys are deterministic UUIDs, extracted via `UuidKeyExtractor<T>`. gRPC is the primary transport; REST exists only as a developer-convenience wrapper over a gRPC impl. gRPC shares the HTTP port (`quarkus.grpc.server.use-separate-server=false`) and message size limits are raised to 2 GB.
 
-### 02 — Mutiny and non-blocking
-[`02-mutiny-non-blocking.md`](02-mutiny-non-blocking.md). Service methods return `Uni<T>` or `Multi<T>`. No `.await()`, no `.await().atMost(...)` outside of `@QuarkusTest`, no ad-hoc thread pools. Genuinely blocking work (Tika, JDBC, file I/O) is offloaded with `Infrastructure.getDefaultWorkerPool()` or `@Blocking`, not with handwritten `Executors.newFixedThreadPool(...)`.
+### 02 — Virtual threads, not Mutiny
+[`02-virtual-threads.md`](02-virtual-threads.md). **Direction reversed 2026-05-12.** Service methods do blocking work on virtual threads via `@RunOnVirtualThread`. New code does not return `Uni<T>` / `Multi<T>` and does not call `.await()`. Existing Mutiny code is being migrated; the doc has the canonical before/after for each pattern (gRPC service, gRPC client, REST client, SPI, `@Scheduled`).
 
 ### 03 — pipestream-platform extensions
 [`03-platform-extensions.md`](03-platform-extensions.md). A reference of every Quarkus extension shipped by `pipestream-platform` and what it auto-configures so downstream projects stop writing scaffolding. Covers `quarkus-apicurio-registry-protobuf`, `pipestream-quarkus-devservices`, `quarkus-dynamic-grpc`, `pipestream-service-registration`, `pipestream-server`, `pipestream-test-support`, and `pipestream-descriptor`.
@@ -35,6 +35,9 @@ These are **principles + examples**, not CI gates. Where an existing doc in `dev
 
 ### 07 — Build and versions
 [`07-build-versions.md`](07-build-versions.md). Always on the latest Quarkus (currently 3.34.3). Java 21. Gradle version catalog in `pipestream-platform`. BOM import is mandatory — never pin pipestream library versions individually. `axion-release` drives version numbers from git tags. Publishing to GitHub Packages + Maven Central via `nmcp`.
+
+### 08 — Java code style
+[`08-java-code-style.md`](08-java-code-style.md). Package layout (`ai.pipestream.<area>.<subarea>`, three-module split for extensions), CDI scope choice (`@Singleton` for cross-classloader SPI impls, `@ApplicationScoped` otherwise), `@ConfigMapping` discipline, the multi-`<p>` javadoc house voice, honest exception handling for gRPC, naming suffixes (`*Service`/`*Backend`/`*Registry`/`*ReadinessCheck`/etc.), test naming (`*UnitTest`/`*Test`/`*IT`).
 
 ## Related reference material inside dev-assets
 

@@ -49,8 +49,8 @@ class ChunkerServiceTest {
 
 Rules:
 
-- `@GrpcClient("name")` injects a Mutiny stub pointed at the in-process gRPC server
-- `.await().atMost(...)` is fine in test code, nowhere else (see [`02-mutiny-non-blocking.md`](02-mutiny-non-blocking.md))
+- `@GrpcClient("name")` injects a stub pointed at the in-process gRPC server. Prefer the **blocking** stub (`<Service>Grpc.<Service>BlockingStub`) so test code reads as plain sync calls — see [`02-virtual-threads.md`](02-virtual-threads.md). Mutiny stubs in legacy tests are fine until the file is migrated.
+- For genuinely async assertions (waiting on a scheduled probe to converge, etc.), use **Awaitility** (`await().atMost(...).until(...)`), not `.await().atMost(...)`.
 - Assertions use AssertJ (`assertThat(...)`) — not Hamcrest matchers, not JUnit's `assertEquals`
 
 ## Integration test: real infrastructure via fixtures
