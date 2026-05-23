@@ -333,3 +333,84 @@ url = "https://github.com/JetBrains/intellij-community.git"
 [[ref_repo]]
 name = "intellij-platform-gradle-plugin"
 url = "https://github.com/JetBrains/intellij-platform-gradle-plugin.git"
+
+# ---- Newly discovered reference repositories ----
+[[ref_repo]]
+name = "grpc-java"
+url = "https://github.com/grpc/grpc-java.git"
+
+[[ref_repo]]
+name = "opensearch/k-NN"
+url = "https://github.com/opensearch-project/k-NN.git"
+
+[[ref_repo]]
+name = "opensearch/remote-vector-index-builder"
+url = "https://github.com/opensearch-project/remote-vector-index-builder.git"
+
+[[ref_repo]]
+name = "protobuf4j"
+url = "https://github.com/roastedroot/protobuf4j.git"
+
+[[ref_repo]]
+name = "quarkus-flow"
+url = "https://github.com/quarkiverse/quarkus-flow.git"
+
+[[ref_repo]]
+name = "quarkus-grpc-zero"
+url = "https://github.com/quarkiverse/quarkus-grpc-zero.git"
+
+[[ref_repo]]
+name = "smallrye-stork"
+url = "https://github.com/smallrye/smallrye-stork.git"
+
+[[ref_repo]]
+name = "wiremock"
+url = "https://github.com/wiremock/wiremock.git"
+
+[[ref_repo]]
+name = "wiremock-grpc-extension"
+url = "https://github.com/wiremock/wiremock-grpc-extension.git"
+
+[[ref_repo]]
+name = "openvino"
+url = "https://github.com/openvinotoolkit/openvino.git"
+
+[[ref_repo]]
+name = "lucene"
+url = "https://github.com/apache/lucene.git"
+
+[[ref_repo]]
+name = "grpc-node"
+url = "https://github.com/grpc/grpc-node.git"
+
+[[ref_repo]]
+name = "grpc-go"
+url = "https://github.com/grpc/grpc-go.git"
+
+[[ref_repo]]
+name = "grpc-rust"
+url = "https://github.com/grpc/grpc-rust.git"
+
+[[ref_repo]]
+name = "vuetify"
+url = "https://github.com/vuetifyjs/vuetify.git"
+
+[[ref_repo]]
+name = "protobuf"
+url = "https://github.com/protocolbuffers/protobuf.git"
+
+[[ref_repo]]
+name = "netty"
+url = "https://github.com/netty/netty.git"
+
+[[ref_repo]]
+name = "guava"
+url = "https://github.com/google/guava.git"
+
+[[ref_repo]]
+name = "flyway"
+url = "https://github.com/flyway/flyway.git"
+
+[[ref_repo]]
+name = "cel-java"
+url = "https://github.com/google/cel-java.git"

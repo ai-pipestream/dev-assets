@@ -25,7 +25,7 @@ SDKMAN_INIT = SDKMAN_DIR / "bin" / "sdkman-init.sh"
 # JVM distribution we install via sdkman. Configurable via workspace.toml later;
 # pinned here to keep Phase 1 self-contained.
 JAVA_VERSION = "25-tem"
-NODE_VERSION = "22"
+NODE_VERSION = "24"
 
 # fnm puts its binary in one of these (depending on installer flags / OS)
 FNM_CANDIDATE_PATHS = [
@@ -110,7 +110,7 @@ def detect_quarkus_cli() -> bool:
 
 
 def detect_node() -> bool:
-    """Require node >= 20 (we target 22 LTS)."""
+    """Require node >= 22 (we target 24 LTS)."""
     node = shutil.which("node")
     if not node:
         # Maybe fnm-managed node isn't on PATH yet
@@ -123,7 +123,7 @@ def detect_node() -> bool:
         if out.returncode != 0:
             return False
         major = int(out.stdout.strip().lstrip("v").split(".")[0])
-        return major >= 20
+        return major >= 22
     except (ValueError, IndexError):
         return False
 
@@ -182,11 +182,9 @@ def install_quarkus() -> None:
     ui.ok("Quarkus CLI installed via sdkman")
 
 
-def install_node_and_pnpm() -> None:
-    """Install fnm, then Node 22 LTS, then enable pnpm via corepack — all in
-    one shell so we don't depend on PATH refresh between steps.
-    """
-    ui.info("Installing fnm + Node + pnpm in a single shell pass...")
+def install_node_only() -> None:
+    """Install fnm, then Node 24 LTS."""
+    ui.info("Installing fnm + Node in a single shell pass...")
     script = f'''
         set -e
         # Install fnm if not already present
@@ -215,21 +213,45 @@ def install_node_and_pnpm() -> None:
         fnm install {NODE_VERSION}
         fnm use {NODE_VERSION}
 
-        echo ">> Enabling pnpm via corepack..."
-        corepack enable
-        corepack prepare pnpm@latest --activate
-
         echo "node: $(node --version)"
-        echo "pnpm: $(pnpm --version)"
     '''
     _run_shell(script)
-    ui.ok(f"Node {NODE_VERSION} LTS + pnpm installed via fnm")
+    ui.ok(f"Node {NODE_VERSION} LTS installed via fnm")
 
 
 def install_pnpm_only() -> None:
     """If node already exists but pnpm doesn't — enable via corepack."""
-    ui.info("Enabling pnpm via corepack on existing node install...")
-    _run_shell("corepack enable && corepack prepare pnpm@latest --activate")
+    ui.info("Enabling pnpm via corepack on node install...")
+    script = '''
+        set -e
+        # If node is not on the PATH, try to load fnm
+        if ! command -v node >/dev/null 2>&1; then
+            FNM_BIN=""
+            for c in "$HOME/.local/share/fnm/fnm" "$HOME/.fnm/fnm"; do
+                if [ -f "$c" ]; then FNM_BIN="$c"; break; fi
+            done
+            if [ -z "$FNM_BIN" ] && command -v fnm >/dev/null 2>&1; then
+                FNM_BIN="$(command -v fnm)"
+            fi
+            if [ -n "$FNM_BIN" ]; then
+                export PATH="$(dirname "$FNM_BIN"):$PATH"
+                eval "$($FNM_BIN env --shell bash)"
+            fi
+        fi
+
+        # Locate active node directory to write corepack shims to
+        NODE_BIN="$(command -v node)"
+        if [ -n "$NODE_BIN" ]; then
+            NODE_DIR="$(dirname "$NODE_BIN")"
+            echo ">> Enabling pnpm in $NODE_DIR..."
+            corepack enable --install-directory "$NODE_DIR"
+            corepack prepare pnpm@latest --activate
+        else
+            echo "ERROR: node not found, cannot enable pnpm" >&2
+            exit 1
+        fi
+    '''
+    _run_shell(script)
     ui.ok("pnpm enabled")
 
 
@@ -357,10 +379,17 @@ def get_prereqs() -> list[Prereq]:
             needs_shell_refresh=True,
         ),
         Prereq(
-            name="node+pnpm",
-            detect=lambda: detect_node() and detect_pnpm(),
-            install=install_node_and_pnpm,
-            install_hint=f"fnm + Node {NODE_VERSION} LTS + pnpm (via corepack)",
+            name="node",
+            detect=detect_node,
+            install=install_node_only,
+            install_hint=f"fnm + Node {NODE_VERSION} LTS",
+            needs_shell_refresh=True,
+        ),
+        Prereq(
+            name="pnpm",
+            detect=detect_pnpm,
+            install=install_pnpm_only,
+            install_hint="enable pnpm (via corepack)",
             needs_shell_refresh=True,
         ),
         Prereq(
