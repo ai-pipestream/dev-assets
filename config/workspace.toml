@@ -90,10 +90,6 @@ name = "pipestream-engine"
 
 [[repo]]
 path = "main/core-services"
-name = "pipestream-engine-kafka-sidecar"
-
-[[repo]]
-path = "main/core-services"
 name = "pipestream-opensearch"
 
 [[repo]]

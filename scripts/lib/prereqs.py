@@ -146,6 +146,26 @@ def detect_gh_auth() -> bool:
     return _cmd_exists("gh") and _silent_ok(["gh", "auth", "status"])
 
 
+def detect_nvidia_ctk() -> bool:
+    """nvidia-container-toolkit + CDI spec so Docker can pass --gpus all.
+
+    No-op on hosts without an NVIDIA driver (nvidia-smi missing or failing) —
+    those run djl-serving on the CPU image, no toolkit needed.
+
+    On macOS we also skip — the GPU pass-through story there is different.
+    """
+    if _is_macos():
+        return True
+    if not _cmd_exists("nvidia-smi") or not _silent_ok(["nvidia-smi", "-L"]):
+        return True
+    # NVIDIA host — toolkit + CDI must both be present.
+    if not _cmd_exists("nvidia-ctk"):
+        return False
+    if not Path("/etc/cdi/nvidia.yaml").exists():
+        return False
+    return True
+
+
 # ---- Installers --------------------------------------------------------
 
 def install_uv() -> None:
@@ -307,6 +327,62 @@ def install_gh() -> None:
     ui.ok("gh installed")
 
 
+def install_nvidia_ctk() -> None:
+    """Install nvidia-container-toolkit, generate CDI spec, restart docker.
+
+    Only reachable when detect_nvidia_ctk returned False, which means we're
+    on a Linux host with a working NVIDIA driver but missing toolkit/CDI.
+    Mirrors pipestream-quarkus-devservices/runtime/src/main/resources/nvidia-gpu-setup.sh
+    so the contract stays consistent across bootstrap and the standalone fix-it script.
+    """
+    if _is_macos():
+        return
+    if not _cmd_exists("apt-get"):
+        raise RuntimeError(
+            "nvidia-container-toolkit auto-install only supports apt-based "
+            "distros (Ubuntu / Debian). See "
+            "https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html"
+        )
+    ui.info("Installing nvidia-container-toolkit (requires sudo)...")
+    _run_shell('''
+        set -e
+        KEYRING=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+        LIST=/etc/apt/sources.list.d/nvidia-container-toolkit.list
+
+        if [ ! -f "$KEYRING" ]; then
+            echo ">> Installing NVIDIA repo keyring..."
+            curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \\
+                | sudo gpg --dearmor -o "$KEYRING"
+        fi
+
+        if [ ! -f "$LIST" ]; then
+            echo ">> Writing APT source list..."
+            curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \\
+                | sed "s#deb https://#deb [signed-by=${KEYRING}] https://#g" \\
+                | sudo tee "$LIST" >/dev/null
+        fi
+
+        if ! command -v nvidia-ctk >/dev/null 2>&1; then
+            echo ">> apt-get update + install nvidia-container-toolkit..."
+            sudo apt-get update -qq
+            sudo apt-get install -y nvidia-container-toolkit
+        fi
+
+        if [ ! -f /etc/cdi/nvidia.yaml ]; then
+            echo ">> Generating CDI spec at /etc/cdi/nvidia.yaml..."
+            sudo mkdir -p /etc/cdi
+            sudo nvidia-ctk cdi generate --output=/etc/cdi/nvidia.yaml
+        fi
+
+        echo ">> Restarting docker so it reloads runtimes + CDI..."
+        sudo systemctl restart docker
+
+        echo ">> Smoke test: docker run --rm --gpus all nvidia/cuda:12.6.0-base-ubuntu22.04 nvidia-smi -L"
+        docker run --rm --gpus all nvidia/cuda:12.6.0-base-ubuntu22.04 nvidia-smi -L
+    ''')
+    ui.ok("nvidia-container-toolkit installed and GPU pass-through verified")
+
+
 def install_gh_auth() -> None:
     if not _cmd_exists("gh"):
         raise RuntimeError("gh not on PATH — install gh first, then re-run.")
@@ -411,6 +487,13 @@ def get_prereqs() -> list[Prereq]:
             install=install_gh_auth,
             install_hint="Interactive `gh auth login` (browser or device flow)",
             notes="Required for HTTPS git operations and private-repo access.",
+        ),
+        Prereq(
+            name="nvidia-container-toolkit",
+            detect=detect_nvidia_ctk,
+            install=install_nvidia_ctk,
+            install_hint="nvidia-container-toolkit + CDI spec (sudo apt; NVIDIA hosts only)",
+            notes="Required for dev-djl-serving GPU mode. Skipped on non-NVIDIA hosts.",
         ),
     ]
 
