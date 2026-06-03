@@ -1,0 +1,43 @@
+# Redis for the pipestream stack — deploy as a Portainer stack (or `docker
+# compose up -d`) on a NAS / remote host so a memory-constrained dev box does
+# not run it locally.
+#
+# 10 GB cap to mirror prod. Pipestream uses Redis for demand-pull work units /
+# claim-check refs (NOT a throwaway cache), so eviction is disabled — a full
+# instance should fail writes loudly rather than silently drop work. AOF +
+# periodic RDB give prod-like durability across restarts.
+#
+# Exposes 6379 directly. If you later front it with a reverse proxy on 443,
+# note that 443+TLS means clients must use rediss:// — the services' current
+# config is plain redis://, so point the .env at <host>:6379 until a TLS
+# scheme/flag is added.
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: pipestream-redis
+    restart: unless-stopped
+    command: >
+      redis-server
+      --maxmemory 10gb
+      --maxmemory-policy noeviction
+      --appendonly yes
+      --appendfsync everysec
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --tcp-keepalive 60
+    ports:
+      - "6379:6379"
+    volumes:
+      - pipestream-redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    ulimits:
+      memlock: -1
+
+volumes:
+  pipestream-redis-data:
+    name: pipestream-redis-data

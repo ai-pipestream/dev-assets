@@ -1,0 +1,28 @@
+# Memory-lean override — copy to ~/.pipeline/compose-devservices.override.yml
+# (the `dev-services` wrapper auto-loads <compose-file>.override.yml).
+#
+# Assigns an inactive profile to the containers we DON'T want started locally,
+# so `docker compose up` skips them. Keeps Kafka + Apicurio + Postgres + Consul
+# + SeaweedFS local; OpenSearch + Redis are expected to be external (set via
+# configure-external.sh); dashboards/UIs/observability are dropped to save RAM.
+#
+# Net local Docker footprint after this: ~2 GB instead of ~8.7 GB.
+services:
+  # --- externalized: don't start locally ---
+  opensearch:
+    profiles: ["external"]
+  opensearch-dashboards:
+    profiles: ["external"]
+  redis:
+    profiles: ["external"]
+
+  # --- not needed for a functional e2e: drop to reclaim RAM ---
+  lgtm:
+    profiles: ["off"]            # observability stack (~0.7 GB)
+  kafka-ui:
+    profiles: ["off"]            # ~0.5 GB
+  apicurio-registry-ui:
+    profiles: ["off"]            # UI only
+
+  # kept local (no override needed): kafka, apicurio-registry, postgres,
+  # consul, seaweedfs
