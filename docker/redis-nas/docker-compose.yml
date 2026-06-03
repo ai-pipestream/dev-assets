@@ -1,0 +1,97 @@
+# Redis single-node stack for the ai-pipestream LAN, tuned to mirror prod.
+#
+# Pipestream uses Redis for demand-pull work units / claim-check refs (NOT a
+# throwaway cache), so eviction is disabled — a full instance fails writes
+# loudly rather than silently dropping work. AOF + periodic RDB give prod-like
+# durability across restarts.
+#
+# Deploy via Portainer: paste into a stack, set the env vars below (at minimum
+# TRAEFIK_NETWORK if you enable the Traefik route), point the data volume at
+# your drive (see DATA VOLUME at the bottom), and deploy.
+#
+# Services connect over plain redis:// on the direct LAN port (6379). The
+# Traefik route is OPTIONAL (commented) — Redis is a TCP protocol, so it needs
+# a TCP router + a dedicated TLS entrypoint, and clients must then use rediss://
+# (the pipestream services currently use plain redis://, so keep using :6379
+# until that's wired).
+
+
+services:
+
+  redis:
+    image: redis:${REDIS_VERSION:-7-alpine}
+    container_name: redis
+    hostname: redis
+    # Sizing/durability tuned for prod parity. REDIS_MAXMEMORY caps the heap;
+    # noeviction protects queued work. AOF (everysec) + RDB snapshots persist.
+    command: >
+      redis-server
+      --maxmemory ${REDIS_MAXMEMORY:-10gb}
+      --maxmemory-policy ${REDIS_MAXMEMORY_POLICY:-noeviction}
+      --appendonly yes
+      --appendfsync everysec
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+      --tcp-keepalive 60
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - redis-data:/data
+    ports:
+      # Direct LAN port — this is what the pipestream services use
+      # (plain redis://<host>:6379). Comment out for Traefik-only access.
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks:
+      - default
+      # - traefik          # uncomment when enabling the Traefik route below
+    # ---- OPTIONAL Traefik TCP route (enable for rediss://<host>:443 access) ----
+    # Redis isn't HTTP, so this is a TCP router with TLS termination, matched by
+    # SNI. Requires a TLS-enabled entrypoint in your Traefik static config and
+    # clients that speak rediss://. Until then, use the direct 6379 port above.
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.docker.network=${TRAEFIK_NETWORK:-traefik_network}"
+    #   - "traefik.tcp.routers.redis.rule=HostSNI(`${REDIS_HOSTNAME:-redis.example.com}`)"
+    #   - "traefik.tcp.routers.redis.entrypoints=${REDIS_TRAEFIK_ENTRYPOINT:-websecure}"
+    #   - "traefik.tcp.routers.redis.tls=true"
+    #   - "traefik.tcp.services.redis.loadbalancer.server.port=6379"
+    restart: unless-stopped
+
+# ============================================================================
+# DATA VOLUME — edit this for your NAS (and avoid the named-volume delete trap)
+# ============================================================================
+# Default below is a Docker-managed named volume. A `docker compose down -v` /
+# Portainer "remove volumes" wipes it. To decouple data from the stack
+# lifecycle, bind-mount it to your drive instead:
+#
+#   volumes:
+#     redis-data:
+#       driver: local
+#       driver_opts:
+#         type: none
+#         o: bind
+#         device: /volume1/docker/redis/data      # <-- your NAS path
+#
+#   sudo mkdir -p /volume1/docker/redis/data && sudo chown -R 999:999 /volume1/docker/redis/data
+#   (redis:alpine runs as uid 999)
+volumes:
+  redis-data:
+    driver: local
+
+networks:
+  default:
+  # Shared traefik network — only needed if you enable the Traefik labels above.
+  # Declared here (commented) so the stack deploys standalone by default and
+  # doesn't fail on a missing external network.
+  # traefik:
+  #   external: true
+  #   name: ${TRAEFIK_NETWORK:-traefik_network}

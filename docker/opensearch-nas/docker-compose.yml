@@ -18,7 +18,6 @@
 # below if you want non-defaults, point the volume at your data drive
 # (see "DATA VOLUME" section at the bottom), and deploy.
 
-name: opensearch-nas
 
 services:
 
