@@ -77,7 +77,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=${TRAEFIK_NETWORK:-traefik_network}"
-      - "traefik.http.routers.opensearch.rule=Host(`${OS_HOSTNAME:-opensearch.rokkon.com}`)"
+      - "traefik.http.routers.opensearch.rule=Host(`${OS_HOSTNAME:-opensearch.example.com}`)"
       - "traefik.http.routers.opensearch.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
       - "traefik.http.routers.opensearch.tls=true"
       - "traefik.http.services.opensearch.loadbalancer.server.port=9200"
@@ -108,7 +108,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=${TRAEFIK_NETWORK:-traefik_network}"
-      - "traefik.http.routers.opensearch-dashboards.rule=Host(`${OS_DASHBOARDS_HOSTNAME:-opensearch-dashboards.rokkon.com}`)"
+      - "traefik.http.routers.opensearch-dashboards.rule=Host(`${OS_DASHBOARDS_HOSTNAME:-opensearch-dashboards.example.com}`)"
       - "traefik.http.routers.opensearch-dashboards.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
       - "traefik.http.routers.opensearch-dashboards.tls=true"
       - "traefik.http.services.opensearch-dashboards.loadbalancer.server.port=5601"

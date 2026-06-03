@@ -35,9 +35,9 @@ and add shards.
    - `OS_DASHBOARDS_PORT` — host port for `:5601`, default `5601`
    - `OS_PERF_PORT` — host port for performance-analyzer `:9600`, default `9600`
    - `OS_CLUSTER_NAME` / `OS_NODE_NAME` — defaults `pipestream-nas` / `opensearch-nas`
-   - `OS_HOSTNAME` — Traefik Host rule for OpenSearch, default `opensearch.rokkon.com`
+   - `OS_HOSTNAME` — Traefik Host rule for OpenSearch, default `opensearch.example.com`
    - `OS_DASHBOARDS_HOSTNAME` — Traefik Host rule for Dashboards,
-     default `opensearch-dashboards.rokkon.com`
+     default `opensearch-dashboards.example.com`
    - `TRAEFIK_NETWORK` — external docker network name, default `traefik_network`
    - `TRAEFIK_ENTRYPOINT` — Traefik entrypoint, default `websecure` (HTTPS)
 4. **Set the data volume** (this is the one thing you should NOT leave on the
@@ -52,23 +52,23 @@ and add shards.
    sudo chown -R 1000:1000 /volume1/docker/opensearch/data
    ```
 5. **DNS** — make sure both hostnames resolve to the NAS:
-   - `opensearch.rokkon.com` → NAS IP
-   - `opensearch-dashboards.rokkon.com` → NAS IP
-   (A wildcard `*.rokkon.com` covers both. Add per-host A records if you
+   - `opensearch.example.com` → NAS IP
+   - `opensearch-dashboards.example.com` → NAS IP
+   (A wildcard `*.example.com` covers both. Add per-host A records if you
    don't have one.)
 6. **Deploy the stack.**
 7. Wait ~60 s for OpenSearch to be healthy (Portainer shows green dot). The
    `init-templates` sidecar exits with status 0 once the template is applied.
 8. Browse:
-   - `https://opensearch.rokkon.com` — REST API (TLS via Traefik)
-   - `https://opensearch-dashboards.rokkon.com` — Dashboards UI (TLS via Traefik)
+   - `https://opensearch.example.com` — REST API (TLS via Traefik)
+   - `https://opensearch-dashboards.example.com` — Dashboards UI (TLS via Traefik)
    - `http://<nas-ip>:9200` and `:5601` — direct LAN access (no Traefik hop)
 
 ## Traefik routing
 
 This compose declares two HTTPS routes via labels and attaches the
 opensearch + dashboards containers to the external `traefik_network`. The
-existing Traefik stack (with the wildcard `*.rokkon.com` cert) auto-discovers
+existing Traefik stack (with the wildcard `*.example.com` cert) auto-discovers
 both via the docker provider — no Traefik config edits needed.
 
 If your traefik network is named differently or you don't run Traefik at all,
@@ -82,9 +82,9 @@ Edit `~/.pipeline/dev/.env` on each dev box. Two options — pick one:
 **HTTPS via Traefik (recommended for off-LAN dev):**
 
 ```
-OPENSEARCH_HOST=opensearch.rokkon.com
+OPENSEARCH_HOST=opensearch.example.com
 OPENSEARCH_PORT=443
-OPENSEARCH_HOSTS=opensearch.rokkon.com:443
+OPENSEARCH_HOSTS=opensearch.example.com:443
 OPENSEARCH_PROTOCOL=https
 OPENSEARCH_SSL_VERIFY=true
 ```
@@ -92,9 +92,9 @@ OPENSEARCH_SSL_VERIFY=true
 **Direct LAN port (skips the proxy hop):**
 
 ```
-OPENSEARCH_HOST=opensearch.rokkon.com
+OPENSEARCH_HOST=opensearch.example.com
 OPENSEARCH_PORT=9200
-OPENSEARCH_HOSTS=opensearch.rokkon.com:9200
+OPENSEARCH_HOSTS=opensearch.example.com:9200
 OPENSEARCH_PROTOCOL=http
 OPENSEARCH_SSL_VERIFY=false
 ```
@@ -140,7 +140,7 @@ Client side: parallel bulk requests (one worker per shard is a good start),
   support it, so the platform is moving back to the REST bulk API.
 - **OpenSearch's built-in security plugin**. Disabled inside the cluster to
   match the local dev pattern. TLS is handled at the Traefik layer using the
-  wildcard `*.rokkon.com` cert. If you ever want auth in front of OS, add a
+  wildcard `*.example.com` cert. If you ever want auth in front of OS, add a
   Traefik `basicauth` middleware (or similar) to the routers — don't enable
   the OS security plugin in this compose without also wiring real certs into
   the JVM keystore.
