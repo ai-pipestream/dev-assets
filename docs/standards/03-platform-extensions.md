@@ -212,8 +212,8 @@ Tests do not register with a real Consul — the `@QuarkusTestResource(ConsulTes
 | Property | Default | Notes |
 |----------|---------|-------|
 | `pipestream.server.class` | `core` | Server class identifier |
-| `pipestream.server.capabilities` | *(unset)* | Advertised capabilities |
-| `pipestream.server.host-mode` | `auto` | |
+| `pipestream.registration.capabilities` | *(unset)* | Capabilities — advertised at registration AND drives HTTP/2 window sizing (`pipedoc`/`large-grpc`) |
+| `pipestream.registration.host-mode` | `auto` | Host derivation for registration (was `pipestream.server.host-mode`, now a deprecated alias) |
 | `pipestream.server.http2.connection-window-size` | *(unset)* | HTTP/2 tuning |
 | `pipestream.server.health.enabled` | `true` | Enable all health checks |
 | `pipestream.server.health.grpc.enabled` | `true` | |
