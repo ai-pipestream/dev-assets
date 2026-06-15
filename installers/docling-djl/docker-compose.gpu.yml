@@ -1,0 +1,42 @@
+# Standalone GPU (NVIDIA) docling + DJL serving — for the parse + embeddings
+# smoke test. Self-contained: own network, no dependency on the platform stack.
+#
+#   ../run-test.sh gpu
+#
+# Requires the NVIDIA Container Toolkit + CDI (sudo nvidia-gpu-setup.sh).
+name: docling-djl-gpu
+
+services:
+  # Docling Serve on the GPU (cu128). REST convert API on :5001.
+  docling-serve:
+    container_name: ddl-docling-gpu
+    image: ghcr.io/docling-project/docling-serve-cu128:v1.14.3
+    ports: ["5001:5001"]
+    gpus: all
+    environment:
+      DOCLING_SERVE_ENABLE_UI: "false"
+      DOCLING_SERVE_ENG_LOC_NUM_WORKERS: "2"
+      DOCLING_SERVE_ENG_LOC_SHARE_MODELS: "true"
+      DOCLING_SERVE_MAX_SYNC_WAIT: "600"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5001/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 60s
+
+  # DJL Serving on the GPU. Container listens on 8080; published on 8090.
+  # Management + inference API on the same port.
+  djl-serving:
+    container_name: ddl-djl-gpu
+    image: deepjavalibrary/djl-serving:0.36.0-pytorch-gpu
+    ports: ["8090:8080"]
+    gpus: all
+    environment:
+      MODEL_LOADING_TIMEOUT: "1200"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/ping || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 90s
