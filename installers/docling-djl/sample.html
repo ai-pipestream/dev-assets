@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><title>Pipestream Sample Document</title></head>
+<body>
+  <h1>Pipestream Parse + Embed Smoke Test</h1>
+  <p>This is a sample document used to verify that <strong>docling</strong> can
+  parse structured content into Markdown, and that <strong>DJL Serving</strong>
+  can turn text into sentence embeddings.</p>
+
+  <h2>Why this exists</h2>
+  <p>The embedder module health-gates on a reachable DJL Serving backend with
+  the MiniLM models loaded, and the parser module uses docling for heavy
+  document conversion (PDFs, scans, complex layouts). This installer proves both
+  inference services work on a given machine, on GPU and on CPU.</p>
+
+  <h2>Models under test</h2>
+  <table>
+    <tr><th>Serving name</th><th>HuggingFace model</th><th>Use</th></tr>
+    <tr><td>minilm</td><td>sentence-transformers/all-MiniLM-L6-v2</td><td>general embeddings</td></tr>
+    <tr><td>paraphrase_MiniLM_L3_v2</td><td>sentence-transformers/paraphrase-MiniLM-L3-v2</td><td>paraphrase similarity</td></tr>
+  </table>
+
+  <p>If docling returns Markdown for this page and DJL returns a vector for a
+  sentence, the machine is ready for the embedder + parser modules.</p>
+</body>
+</html>
