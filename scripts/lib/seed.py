@@ -4,7 +4,7 @@ Mirrors the layout krick uses:
   ~/.pipeline/compose-devservices.yml      -> platform extension src
   ~/.pipeline/init-postgres.sql            -> platform extension src
   ~/.pipeline/seaweedfs-s3-config.json     -> platform extension src
-  ~/.pipeline/consul-config/               -> platform extension src
+
   ~/.pipeline/dev/process-compose.yaml     -> platform extension src
   ~/.pipeline/dev/check-*.sh               -> platform extension src
   ~/.pipeline/dev/start-dev-djl.sh         -> platform extension src
@@ -51,8 +51,9 @@ _ROOT_FILES = [
     "seaweedfs-s3-config.json",
 ]
 
-# Subdirs copied at ~/.pipeline/<dir>
-_ROOT_SUBDIRS = ["consul-config"]
+# Subdirs copied at ~/.pipeline/<dir> (none today; consul-config died with
+# the consul retirement — the frontend resolves via platform-registration).
+_ROOT_SUBDIRS: list[str] = []
 
 # Files at ~/.pipeline/dev/<file>
 _DEV_FILES = [
