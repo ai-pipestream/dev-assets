@@ -200,6 +200,15 @@ CORE_SERVICES_DIR={core}
 MODULES_DIR={modules}
 PC_PORT_NUM=8765
 
+# Dev wiring — process-compose exports these to every service.
+# Registration runs grpc-mode with no discovery fallback, so services need the
+# local platform-registration host+port (the %localdocker container profile
+# overrides these to the container name in its own compose env).
+PIPESTREAM_REGISTRATION_REGISTRATION_SERVICE_HOST=localhost
+PIPESTREAM_REGISTRATION_REGISTRATION_SERVICE_PORT=18101
+# Silence JDK 25 native-access warnings (Netty / AWS SDK) on every forked dev JVM.
+JDK_JAVA_OPTIONS=--enable-native-access=ALL-UNNAMED
+
 # Connectors moved out of core-services in the new layout — point at them
 # explicitly so process-compose.yaml's defaults pick up the right paths.
 JDBC_CONNECTOR_DIR={connectors}/jdbc-connector
