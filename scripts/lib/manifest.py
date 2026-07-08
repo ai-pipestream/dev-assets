@@ -22,23 +22,29 @@ _USER_OVERRIDE_PATH = (
 )
 
 
+FORGEJO_HOST = "git.rokkon.com"
+
+
 @dataclass(frozen=True)
 class Repo:
     path: str            # e.g. "main/core-services"
-    name: str            # e.g. "pipestream-platform"
+    name: str            # e.g. "pipestream-platform" — the Forgejo repo name
+    dir_name: str = ""   # on-disk directory name, if different from `name`
+                          # (e.g. a repo renamed upstream but the checkout
+                          # stays put since other config points there)
     branch: str = "main"
     build_first: bool = False
 
     def dest(self, root: Path) -> Path:
-        return root / self.path / self.name
+        return root / self.path / (self.dir_name or self.name)
 
     def relative_dest(self) -> str:
-        return f"{self.path}/{self.name}"
+        return f"{self.path}/{self.dir_name or self.name}"
 
     def clone_url(self, protocol: str, org: str) -> str:
         if protocol == "ssh":
-            return f"git@github.com:{org}/{self.name}.git"
-        return f"https://github.com/{org}/{self.name}.git"
+            return f"git@{FORGEJO_HOST}:{org}/{self.name}.git"
+        return f"https://{FORGEJO_HOST}/{org}/{self.name}.git"
 
 
 @dataclass(frozen=True)
@@ -67,7 +73,7 @@ class Workspace:
     jdk: str
     clone_protocol: str
     parallelism: int
-    github_org: str
+    forgejo_org: str
     repos: tuple[Repo, ...]
     ref_repos: tuple[RefRepo, ...]
 
@@ -133,6 +139,7 @@ def load() -> Workspace:
         Repo(
             path=r["path"],
             name=r["name"],
+            dir_name=r.get("dir_name", ""),
             branch=r.get("branch", "main"),
             build_first=r.get("build_first", False),
         )
@@ -154,7 +161,7 @@ def load() -> Workspace:
         jdk=str(ws.get("jdk", "25-tem")),
         clone_protocol=str(ws.get("clone_protocol", "https")),
         parallelism=int(ws.get("parallelism", 8)),
-        github_org=str(ws.get("github_org", "ai-pipestream")),
+        forgejo_org=str(ws.get("forgejo_org", "ai-pipestream")),
         repos=repos,
         ref_repos=ref_repos,
     )

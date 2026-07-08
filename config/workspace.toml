@@ -28,19 +28,29 @@ clone_protocol = "https"
 # Parallel git clones during the bootstrap clone phase.
 parallelism = 8
 
-# GitHub org all platform repos live under.
-github_org = "ai-pipestream"
+# Forgejo org all platform repos live under (git.rokkon.com). Forgejo is the
+# source of truth as of 2026-07-07 — GitHub is a live push-mirror, never
+# clone/pull from it. (Historically this cloned from github.com; if a
+# checkout still has a github.com origin, see [[work-main-stale-checkouts]]
+# in project memory — repoint it, don't re-clone from here.)
+forgejo_org = "ai-pipestream"
 
 
 # ============================================================================
 # Repo manifest
 # ============================================================================
 # Each [[repo]] entry produces:
-#   <root>/<path>/<name>
+#   <root>/<path>/<dir_name or name>
 #
 # Fields:
 #   path          required  destination directory under <root>
-#   name          required  GitHub repo name under <github_org>
+#   name          required  Forgejo repo name under <forgejo_org>
+#   dir_name      optional  on-disk directory name, if different from the
+#                           repo name (e.g. module-embedder's repo was
+#                           renamed to pipestream-embedder upstream but the
+#                           checkout stays at .../module-embedder since
+#                           other config — .env, process-compose.yaml —
+#                           already points there)
 #   branch        optional  default "main"
 #   build_first   optional  default false; if true, this repo is built
 #                           SERIALLY before any parallel build starts
@@ -109,15 +119,15 @@ path = "main/core-services"
 name = "tika4-shaded"
 
 # ---- core-services/embedders -------------------------------------------
-# Drop-in backends for module-embedder. DJL targets NVIDIA; OpenVINO
-# targets IBM B70 Pro and CPU.
-[[repo]]
-path = "main/core-services/embedders"
-name = "pipestream-embedder-djl"
-
-[[repo]]
-path = "main/core-services/embedders"
-name = "pipestream-embedder-openvino"
+# pipestream-embedder-djl and pipestream-embedder-openvino used to be
+# separate drop-in backend repos here (DJL for NVIDIA, OpenVINO for Intel/
+# CPU). Both got folded into the pipestream-embedder monorepo as sibling
+# Gradle modules (quarkus-djl-serving-embeddings, quarkus-openvino-embeddings
+# — commit 4c36b80 "restore the OVMS ops tooling from the archived
+# standalone repo"). That's the main/modules/pipestream-embedder entry
+# below (checked out at .../module-embedder, see dir_name). Removed here
+# 2026-07-08 so `clone` stops re-fetching two dead repos — their content
+# lives on as history in the monorepo, nothing unique left behind.
 
 # ---- modules ------------------------------------------------------------
 # gRPC pipeline processors. Each implements the module contract from
@@ -132,7 +142,8 @@ name = "module-parser"
 
 [[repo]]
 path = "main/modules"
-name = "module-embedder"
+name = "pipestream-embedder"
+dir_name = "module-embedder"
 
 [[repo]]
 path = "main/modules"
