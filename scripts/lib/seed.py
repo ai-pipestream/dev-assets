@@ -174,6 +174,15 @@ def _copy(src: Path, dst: Path, dry_run: bool) -> bool:
     return True
 
 
+def _render_gid() -> int | None:
+    """This host's `render` group gid, or None when the group doesn't exist."""
+    try:
+        import grp
+        return grp.getgrnam("render").gr_gid
+    except (ImportError, KeyError):
+        return None
+
+
 def _shorten(p: Path) -> str:
     try:
         return "~/" + str(p.relative_to(Path.home()))
@@ -214,6 +223,15 @@ JDK_JAVA_OPTIONS=--enable-native-access=ALL-UNNAMED
 # explicitly so process-compose.yaml's defaults pick up the right paths.
 JDBC_CONNECTOR_DIR={connectors}/jdbc-connector
 S3_CONNECTOR_DIR={connectors}/s3-connector
+"""
+    render_gid = _render_gid()
+    if render_gid is not None:
+        content += f"""
+# GPU render-node group for containerized backends (OVMS on Intel GPUs).
+# Detected from this host's `render` group at seed time — the compose default
+# (993) silently breaks GPU access on hosts where the gid differs (e.g. 990),
+# and every model then fails with "Cannot compile model into target device".
+OVMS_RENDER_GID={render_gid}
 """
     short = _shorten(env_file)
     if dry_run:
