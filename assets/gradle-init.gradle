@@ -1,0 +1,93 @@
+// ~/.gradle/init.gradle  — global dependency-resolution policy for ai-pipestream.
+//
+// Applies to EVERY Gradle build using this GRADLE_USER_HOME (local dev and, when
+// deployed to the CI runner image, all CI jobs). No per-repo build config changes.
+//
+// For plugin, settings-level, and project-level repositories it:
+//   1. Removes GitHub Packages (maven.pkg.github.com) — the Forgejo runner's ambient
+//      GITHUB_TOKEN is a git.rokkon.com token and 401s against github.com.
+//   2. Removes Maven Central + Gradle Plugin Portal, replacing them with our NAS
+//      Reposilite pull-through cache (maven.rokkon.com/releases). Central rate-limits
+//      our egress IP (429) under concurrent CI; the cache hits Central at most once
+//      per artifact. Reposilite reads are anonymous.
+//   3. Adds our Forgejo Maven registry FIRST for ai.pipestream.* (SNAPSHOTs + releases
+//      no longer pushed to Central). The proxy EXCLUDES ai.pipestream.* so our group
+//      only ever resolves from Forgejo.
+//
+// Forgejo creds (optional — reads are anonymous): env FORGEJO_ACTOR/FORGEJO_TOKEN
+// or props forgejoUser/forgejoToken (~/.gradle/gradle.properties).
+
+import org.gradle.api.artifacts.repositories.MavenArtifactRepository
+
+def FORGEJO_MAVEN     = 'https://git.rokkon.com/api/packages/ai-pipestream/maven'
+def REPOSILITE        = 'https://maven.rokkon.com/releases'
+def REPOSILITE_SNAP   = 'https://maven.rokkon.com/snapshots'
+def OUR_GROUP         = 'ai\\.pipestream(\\..*)?'
+// Hosts we proxy through Reposilite instead of hitting directly.
+def PROXIED_HOSTS = ['repo.maven.apache.org', 'repo1.maven.org', 'repo.maven.org',
+                     'plugins.gradle.org', 'jcenter.bintray.com', 'oss.sonatype.org',
+                     'central.sonatype.com']
+def fjUser  = { -> System.getenv('FORGEJO_ACTOR') }
+def fjToken = { -> System.getenv('FORGEJO_TOKEN') }
+
+def applyPolicy
+applyPolicy = { repos, user, token ->
+    def host = { r -> (r instanceof MavenArtifactRepository && r.url != null) ? r.url.host : null }
+
+    // 1. drop GitHub Packages
+    repos.findAll { host(it) == 'maven.pkg.github.com' }.each { repos.remove(it) }
+    // 2. drop Central + Plugin Portal (served via Reposilite proxy)
+    repos.findAll { PROXIED_HOSTS.contains(host(it)) }.each { repos.remove(it) }
+
+    // 3. Reposilite proxy for third-party artifacts (exclude our group -> Forgejo only).
+    //    Snapshots proxy (Central snapshots) + releases proxy (Central + Plugin Portal).
+    //    NOTE: do NOT exclude ai.pipestream here — some of our RELEASE artifacts
+    //    (court data jars, test-documents, wiremock-server, opensearch-client) live
+    //    on Central, not Forgejo. Forgejo is first for ai.pipestream (SNAPSHOTs +
+    //    Forgejo-hosted); the proxy is the fallback for our Central-hosted releases.
+    if (repos.findByName('reposiliteSnapshots') == null) {
+        def sx = repos.maven {
+            name = 'reposiliteSnapshots'
+            url = REPOSILITE_SNAP
+            mavenContent { snapshotsOnly() }
+        }
+        repos.remove(sx); repos.add(0, sx)
+    }
+    if (repos.findByName('reposiliteProxy') == null) {
+        def px = repos.maven {
+            name = 'reposiliteProxy'
+            url = REPOSILITE
+        }
+        repos.remove(px); repos.add(0, px)
+    }
+    // 4. Forgejo FIRST for ai.pipestream.*
+    if (repos.findByName('forgejoPackages') == null) {
+        def fj = repos.maven {
+            name = 'forgejoPackages'
+            url = FORGEJO_MAVEN
+            if (token) { credentials { username = user ?: ''; password = token } }
+            content { includeGroupByRegex OUR_GROUP }
+        }
+        repos.remove(fj); repos.add(0, fj)
+    }
+}
+
+gradle.settingsEvaluated { settings ->
+    def token = fjToken() ?: settings.providers.gradleProperty('forgejoToken').getOrNull()
+    def user  = fjUser()  ?: settings.providers.gradleProperty('forgejoUser').getOrElse('')
+    // plugin resolution (build.gradle plugins{}) + dependency resolution
+    applyPolicy(settings.pluginManagement.repositories, user, token)
+    applyPolicy(settings.dependencyResolutionManagement.repositories, user, token)
+}
+
+// Project-level repositories declared in build.gradle (only touch projects that
+// declare their own — avoids tripping FAIL_ON_PROJECT_REPOS on settings-only builds).
+gradle.allprojects { project ->
+    project.afterEvaluate {
+        def repos = project.repositories
+        if (repos.isEmpty()) return
+        def token = fjToken() ?: project.findProperty('forgejoToken')
+        def user  = fjUser()  ?: (project.findProperty('forgejoUser') ?: '')
+        applyPolicy(repos, user, token)
+    }
+}
