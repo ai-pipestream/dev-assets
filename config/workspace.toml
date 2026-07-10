@@ -102,9 +102,9 @@ name = "pipestream-engine"
 path = "main/core-services"
 name = "pipestream-opensearch"
 
-[[repo]]
-path = "main/core-services"
-name = "pipestream-opensearch-client"
+# pipestream-opensearch-client was deleted from Forgejo (folded into
+# pipestream-opensearch). Entry removed 2026-07-10; the on-disk checkout
+# at main/core-services/pipestream-opensearch-client is left alone.
 
 [[repo]]
 path = "main/core-services"
@@ -165,6 +165,10 @@ name = "module-semantic-graph"
 path = "main/modules"
 name = "module-testing-sidecar"
 
+[[repo]]
+path = "main/modules"
+name = "module-quality"
+
 # ---- connectors ---------------------------------------------------------
 # Source connectors that feed documents into the pipeline.
 [[repo]]
@@ -188,9 +192,16 @@ name = "pipestream-frontend"
 path = "main/dev-tools"
 name = "dev-assets"
 
+# Renamed on Forgejo 2026-07 from docker-integration-tests; the checkout
+# stays at .../docker-integration-tests since local tooling points there.
 [[repo]]
 path = "main/dev-tools"
-name = "docker-integration-tests"
+name = "pipestream-docker"
+dir_name = "docker-integration-tests"
+
+[[repo]]
+path = "main/dev-tools"
+name = "pipestream-integration-tests"
 
 [[repo]]
 path = "main/dev-tools"
