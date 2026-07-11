@@ -219,6 +219,10 @@ name = "quarkus-grpc-gatherer"
 path = "main/dev-tools"
 name = "quarkus-buf-grpc-generator"
 
+[[repo]]
+path = "main/dev-tools"
+name = "pipestream-proto-tools"
+
 
 # ============================================================================
 # Reference-code manifest
@@ -276,6 +280,11 @@ name = "vertx-grpc"
 url = "https://github.com/eclipse-vertx/vertx-grpc.git"
 branch = "4.x"
 
+[[ref_repo]]
+name = "vertx-grpc-fork"
+url = "https://github.com/ai-pipestream/vertx-grpc.git"
+branch = "fix/quadratic-deframer-4.x"
+
 # ---- Apicurio / schema registry -----------------------------------------
 [[ref_repo]]
 name = "apicurio-registry"
@@ -310,6 +319,19 @@ url = "https://github.com/docling-project/docling-java.git"
 name = "opennlp"
 url = "https://github.com/ai-pipestream/opennlp.git"
 
+[[ref_repo]]
+name = "opennlp-models"
+url = "https://github.com/apache/opennlp-models.git"
+
+[[ref_repo]]
+name = "opennlp-sandbox"
+url = "https://github.com/apache/opennlp-sandbox.git"
+branch = "OPENNLP-1833-grpc-expansion"
+
+[[ref_repo]]
+name = "sentencepiece"
+url = "https://github.com/google/sentencepiece.git"
+
 # ---- Persistence + clustering -------------------------------------------
 [[ref_repo]]
 name = "hibernate-orm"
@@ -333,10 +355,18 @@ url = "https://github.com/networknt/json-schema-validator.git"
 name = "awaitility"
 url = "https://github.com/awaitility/awaitility.git"
 
+[[ref_repo]]
+name = "commonmark-java"
+url = "https://github.com/commonmark/commonmark-java.git"
+
 # ---- Storage -------------------------------------------------------------
 [[ref_repo]]
 name = "seaweedfs"
 url = "https://github.com/seaweedfs/seaweedfs.git"
+
+[[ref_repo]]
+name = "gravitino"
+url = "https://github.com/apache/gravitino.git"
 
 # ---- Build / publish tooling --------------------------------------------
 [[ref_repo]]
