@@ -530,7 +530,7 @@ flowchart TD
     
     C -->|MySQL| D[Check Database<br/>• Connection strings<br/>• Network connectivity<br/>• Database server status]
     
-    C -->|S3| E[Check S3 Storage<br/>• Bucket permissions<br/>• Network connectivity<br/>• MinIO server status]
+    C -->|S3| E[Check S3 Storage<br/>• Bucket permissions<br/>• Network connectivity<br/>• S3 server status]
     
     C -->|Kafka| F[Check Kafka<br/>• Broker availability<br/>• Topic configuration<br/>• Network connectivity]
     

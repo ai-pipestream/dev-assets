@@ -9,7 +9,7 @@ aws.s3.multipart-threshold=5MB
 aws.s3.concurrent-requests=10
 aws.s3.max-connections=50
 
-# Development (MinIO)
+# Development (SeaweedFS)
 %dev.aws.s3.endpoint-override=http://localhost:9000
 %dev.aws.s3.path-style-access-enabled=true
 
@@ -63,7 +63,7 @@ mp.messaging.outgoing.drive-events.value.serializer=io.pipeline.repository.event
 
 1. **Removed Bucket Configuration**: Buckets are database-driven, not configuration-driven
 2. **Added Upload Configuration**: Chunk size, timeouts, etc. are now configurable
-3. **Simplified S3 Config**: Just the minimum needed for MinIO/S3 compatibility
+3. **Simplified S3 Config**: Just the minimum needed for SeaweedFS/S3 compatibility
 4. **Database Pool Settings**: Added min/max pool sizes and validation query
 5. **Extensible**: Easy to add more configuration as needed
 

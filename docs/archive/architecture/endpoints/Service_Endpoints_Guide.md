@@ -54,8 +54,7 @@ These URLs and ports are for the **development environment** infrastructure, man
 | **Kafka UI** | http://localhost:8889 | N/A |
 | **Apicurio Registry API** | http://localhost:8081 | N/A |
 | **Apicurio Registry UI** | http://localhost:8888 | N/A |
-| **MinIO Console** | http://localhost:9001 | minioadmin/minioadmin |
-| **MinIO API** | `http://localhost:9000` | minioadmin/minioadmin |
+| **SeaweedFS S3** | `http://localhost:8333` | any/any |
 | **Grafana** | http://localhost:3001 | N/A |
 
 ### **Test Environment Infrastructure**
@@ -85,7 +84,7 @@ docker-compose -f src/test/resources/compose-devservices.yml logs -f consul
 
 | Service | URL | Username | Password |
 | :--- | :--- | :--- | :--- |
-| **MinIO Console** | http://localhost:9001 | `minioadmin` | `minioadmin` |
+| **SeaweedFS S3** | http://localhost:8333 | `any` | `any` |
 | **MySQL Database** | localhost:3306 | `pipeline` | `password` |
 
 ---

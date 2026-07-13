@@ -3,7 +3,7 @@
 ## 🎉 MAJOR REFACTOR COMPLETE (90% Done) - January 14, 2025
 
 ### Critical Architecture Fix Achieved
-**The 12MB Kafka payload problem has been completely resolved.** Kafka events now contain only metadata (~75 bytes) while actual document payloads are stored in S3/MinIO. This was the core architectural violation that cost months of debugging.
+**The 12MB Kafka payload problem has been completely resolved.** Kafka events now contain only metadata (~75 bytes) while actual document payloads are stored in S3/SeaweedFS. This was the core architectural violation that cost months of debugging.
 
 ## Overview
 

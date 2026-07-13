@@ -70,8 +70,7 @@ These ports are managed via Docker Compose.
 | **Apicurio Registry UI**| `8888` | Schema Registry Web UI |
 | **OpenSearch** | `9200` | Search & analytics engine API |
 | **OpenSearch Dashboards**| `5601` | OpenSearch Web UI |
-| **MinIO API** | `9000` | S3-compatible object storage |
-| **MinIO Console** | `9001` | MinIO Web UI |
+| **SeaweedFS S3** | `8333` | S3-compatible object storage |
 | **Kafka UI** | `8889` | Kafka Management UI |
 | **Grafana (LGTM)** | `3001` | Metrics and observability dashboard |
 
@@ -85,8 +84,7 @@ These ports are intentionally offset from development to prevent conflicts.
 | **MySQL** | `3307` | Test database |
 | **Kafka** | `9095` | Test message streaming |
 | **Apicurio Registry** | `8082` | Test Schema Registry API |
-| **MinIO API** | `9010` | Test S3-compatible storage |
-| **MinIO Console** | `9011` | Test MinIO Web UI |
+| **SeaweedFS S3** | `9010` | Test S3-compatible storage |
 
 ---
 

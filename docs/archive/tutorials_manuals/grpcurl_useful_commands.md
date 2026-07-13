@@ -3,7 +3,7 @@
 These commands exercise the repository-service gRPC APIs end-to-end using grpcurl, including S3-backed filesystem operations, PipeDoc storage, and ProcessRequest storage. All commands use plaintext (h2c) against the Quarkus HTTP port.
 
 Prerequisites
-- Compose dev stack running (MySQL, Kafka, Apicurio, MinIO, OpenSearch, LGTM).
+- Compose dev stack running (MySQL, Kafka, Apicurio, SeaweedFS, OpenSearch, LGTM).
 - Services started locally (default ports):
   - repository-service: 38102
   - opensearch-manager: 38103

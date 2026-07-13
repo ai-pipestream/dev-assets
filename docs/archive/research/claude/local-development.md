@@ -134,7 +134,7 @@ docker compose -f compose-devservices.yml ps
 - Kafka + Zookeeper (ports 9092, 2181)
 - Apicurio Registry (port 8081)
 - Consul (port 8500)
-- MinIO (ports 9000, 9001)
+- SeaweedFS (port 8333)
 - OpenSearch (port 9200)
 - Traefik (ports 80, 8080)
 
@@ -829,11 +829,11 @@ docker compose -f dev-infrastructure/compose-devservices.yml exec mysql \
 # Password: root
 ```
 
-**View MinIO files**:
+**View SeaweedFS files**:
 ```bash
-# MinIO Console: http://localhost:9001
-# User: minioadmin
-# Password: minioadmin
+# SeaweedFS S3 endpoint: http://localhost:8333
+# Access key: any
+# Secret key: any
 ```
 
 ### Performance Profiling

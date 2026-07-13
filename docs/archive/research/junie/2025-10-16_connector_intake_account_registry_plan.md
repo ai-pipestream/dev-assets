@@ -6,7 +6,7 @@ Purpose
 - Turn the answered questions (2025-10-16_product_questions_connector_repo.md) into a concrete, incremental plan and minimal contract decisions so multiple contributors can work in parallel.
 
 Executive Summary
-- We will implement three services in small, testable slices: Account (standalone MVP), Connector Registry/Admin (with cross-account support), and Connector Intake (streaming). Intake writes through to Repo-Service for S3 + DB. We standardize S3 key prefixes with connector context, use drive-based routing (pre-created buckets), and keep quotas and advanced observability for later. We’ll rely on grpc-wiremock for golden-path tests and MinIO + MySQL for integration.
+- We will implement three services in small, testable slices: Account (standalone MVP), Connector Registry/Admin (with cross-account support), and Connector Intake (streaming). Intake writes through to Repo-Service for S3 + DB. We standardize S3 key prefixes with connector context, use drive-based routing (pre-created buckets), and keep quotas and advanced observability for later. We’ll rely on grpc-wiremock for golden-path tests and SeaweedFS + MySQL for integration.
 
 Key Decisions (from your answers)
 - Ownership/S3/Drives: Connectors specify drive; drives are pre-created and not shared between accounts. Repo decides bucket via drive. No bucket creation in code for MVP.
@@ -46,7 +46,7 @@ Phased Plan and Work Slices
    - Dedup + Updates: Primary key (connector_id + client_document_id), fallback (connector_id + source_id). If checksum unchanged, return was_update=false; else was_update=true with previous_version.
    - Repo Write-Through: Use Repo-Service to store payload and metadata; repo chooses bucket via drive; persist minimal metadata: account_id, connector_id, path, mime_type, size_bytes, checksum, timestamps, client IDs.
    - Errors: Standard taxonomy (INVALID_AUTH, INVALID_ARGUMENT, RATE_LIMIT, PAYLOAD_TOO_LARGE, INTERNAL). Per-document responses allow continuing the stream. Include retry guidance in docs.
-   - Tests: E2E with MinIO + MySQL; grpc-wiremock for account/connector when needed.
+   - Tests: E2E with SeaweedFS + MySQL; grpc-wiremock for account/connector when needed.
 
 5. Repo-Service validation/adjustments
    - Verify connector-aware key prefixes are supported; adjust if necessary.
@@ -69,7 +69,7 @@ Contract Deltas (Minimal, Proposed)
 
 Test Strategy
 - Golden-path API tests with grpc-wiremock per service (no multi-service dev prerequisite).
-- Integration tests (dev services): MinIO + MySQL for intake→repo E2E, validating S3 keys, metadata persistence, and events.
+- Integration tests (dev services): SeaweedFS + MySQL for intake→repo E2E, validating S3 keys, metadata persistence, and events.
 - Reuse sample docs from modules/parser resources.
 
 Open Items (Explicitly Deferred)

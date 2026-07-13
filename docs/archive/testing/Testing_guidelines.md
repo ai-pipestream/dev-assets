@@ -37,7 +37,7 @@ This document outlines the comprehensive testing strategy for the pipeline-engin
 ### Compose Dev Services
 - **Development**: `src/test/resources/compose-devservices.yml`
 - **Testing**: `src/test/resources/compose-test-services.yml`
-- **Purpose**: Manage test infrastructure (MySQL, Kafka, MinIO)
+- **Purpose**: Manage test infrastructure (MySQL, Kafka, SeaweedFS)
 - **Configuration**: Single instance to prevent long startup times
 
 ### WireMock for External Services
@@ -99,7 +99,7 @@ This document outlines the comprehensive testing strategy for the pipeline-engin
 ### S3 Testing
 - **Interface Pattern**: Create `S3Operations` interface
 - **Mocking**: Mock S3 operations for unit tests
-- **Integration**: Use MinIO for integration tests
+- **Integration**: Use SeaweedFS for integration tests
 
 ## Database Testing
 

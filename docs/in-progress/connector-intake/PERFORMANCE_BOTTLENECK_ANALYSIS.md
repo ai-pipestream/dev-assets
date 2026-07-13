@@ -299,7 +299,7 @@ Parallel: 11 chunks ÷ 10 workers × 2.5s = 2.75s (with 10 workers)
 ### Test Setup
 - File: `/home/krickert/Downloads/cursor_1.5.11_amd64.deb` (103MB)
 - Chunk size: 10MB (11 chunks total)
-- Services: Local gRPC (connector-intake-service → repo-service → MinIO S3)
+- Services: Local gRPC (connector-intake-service → repo-service → SeaweedFS S3)
 
 ### Test Commands
 ```bash

@@ -8,7 +8,7 @@
 
 ## Storage Layer
 - **S3-Compatible Storage**: 
-  - **Development/Test**: MinIO for local development
+  - **Development/Test**: SeaweedFS for local development
   - **Production**: Compatible with AWS S3, Google Cloud Storage, Azure Blob Storage utilizing the S3 API by Amazon through the Quarkus extension
 - **Protobuf Serialization**: 
   - **Quarkus Integration**: Uses Quarkus protobuf support with Apicurio Registry

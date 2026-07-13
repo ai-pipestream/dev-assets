@@ -17,8 +17,8 @@
 
 ## S3 Testing Strategy
 
-**MinIO for Integration Tests:**
-- Use MinIO for realistic S3 testing
+**SeaweedFS for Integration Tests:**
+- Use SeaweedFS for realistic S3 testing
 - Test actual upload/download operations
 - Verify multi-part uploads work correctly
 
@@ -44,7 +44,7 @@
 %test.quarkus.datasource.password=password
 %test.quarkus.datasource.jdbc.url=jdbc:mysql://localhost:3307/pipeline_test
 
-# Test S3 Configuration (MinIO)
+# Test S3 Configuration (SeaweedFS)
 %test.aws.s3.endpoint-override=http://localhost:9000
 %test.aws.s3.path-style-access-enabled=true
 %test.aws.s3.bucket-name=test-bucket
@@ -76,7 +76,7 @@ public class DocumentServiceTest {
     
     @Test
     void testUploadDocument() {
-        // Integration test with MinIO
+        // Integration test with SeaweedFS
         // Test actual S3 operations
     }
 }
@@ -102,7 +102,7 @@ public class DocumentServiceTest {
 
 1. **Phased Approach**: Unit → Dev Mode → Integration
 2. **Real Test Data**: Use existing sample documents
-3. **MinIO Integration**: Realistic S3 testing
+3. **SeaweedFS Integration**: Realistic S3 testing
 4. **Table Isolation**: Same MySQL, different table names
 5. **Fast Unit Tests**: Mock S3 for speed
-6. **Realistic Integration**: MinIO for end-to-end testing
+6. **Realistic Integration**: SeaweedFS for end-to-end testing

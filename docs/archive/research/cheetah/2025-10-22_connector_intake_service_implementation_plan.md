@@ -289,7 +289,7 @@ This document outlines the complete implementation plan for the Connector Intake
 
 1. **Create E2E Test**
    - [ ] Create `applications/connector-intake-service/src/test/java/io/pipeline/connector/intake/ConnectorIntakeServiceE2ETest.java`
-   - [ ] Use Testcontainers for MySQL and MinIO
+   - [ ] Use Testcontainers for MySQL and SeaweedFS
    - [ ] Use shared compose file for test services
    - [ ] Test full flow: connector validation → document storage → deduplication
    - [ ] Test error scenarios
@@ -337,7 +337,7 @@ This document outlines the complete implementation plan for the Connector Intake
 
 ### E2E Tests
 - Use Testcontainers with shared compose file
-- Test with real MySQL and MinIO
+- Test with real MySQL and SeaweedFS
 - Test full document ingestion flow
 
 ### Manual Testing

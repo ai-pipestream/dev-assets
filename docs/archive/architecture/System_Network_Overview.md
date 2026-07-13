@@ -199,7 +199,7 @@ The canonical port allocation strategy for all services and infrastructure is de
 |-----------|---------|------------|-------------|
 | **Consul** | Service discovery, health checks, config KV store | Multi-datacenter cluster | Single-node local |
 | **Kafka** | Async messaging, event streaming | Managed Kafka service | Local Kafka cluster |
-| **S3 Compatible Storage** | Document and payload storage | AWS S3, Google Cloud Storage, Azure Blob | MinIO (local S3-compatible) |
+| **S3 Compatible Storage** | Document and payload storage | AWS S3, Google Cloud Storage, Azure Blob | SeaweedFS (local S3-compatible) |
 | **MySQL** | Metadata and relationship storage | Managed MySQL service | Local MySQL container |
 | **OpenSearch** | Full-text search and vector similarity | Managed OpenSearch cluster | Local OpenSearch |
 | **Load Balancer** | Traffic distribution and SSL termination | Cloud Load Balancer (ALB, GLB, etc.) | Traefik (dev proxy only) |
@@ -208,7 +208,7 @@ The canonical port allocation strategy for all services and infrastructure is de
 
 ### Development Environment
 - **Traefik** - Local reverse proxy and SSL termination for development
-- **MinIO** - S3-compatible object storage for local testing
+- **SeaweedFS** - S3-compatible object storage for local testing
 - **Local containers** - All infrastructure runs in Docker containers
 - **Frontend Development Server** - Node.js development server with hot reload
 
@@ -222,7 +222,7 @@ The canonical port allocation strategy for all services and infrastructure is de
 | Aspect | Development | Production |
 |--------|-------------|------------|
 | **Load Balancing** | Traefik (local proxy) | Cloud Load Balancer |
-| **Object Storage** | MinIO (S3-compatible) | Native cloud storage (S3, GCS, Azure) |
+| **Object Storage** | SeaweedFS (S3-compatible) | Native cloud storage (S3, GCS, Azure) |
 | **Service Discovery** | Local Consul | Multi-datacenter Consul cluster |
 | **Frontend** | Development server | Static hosting + CDN |
 | **TLS/SSL** | Self-signed certificates | Cloud-managed certificates |

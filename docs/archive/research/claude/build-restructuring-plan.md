@@ -92,7 +92,7 @@ libraries (all depend on grpc-stubs + bom)
 applications (depend on libraries + grpc-stubs)
     ├─→ account-manager (MySQL, registration-service)
     ├─→ connector-service (account-manager, kafka)
-    ├─→ repo-service (MinIO, many services)
+    ├─→ repo-service (S3 storage, many services)
     ├─→ mapping-service (embedded Vue)
     ├─→ opensearch-manager (Kafka, Apicurio, OpenSearch)
     ├─→ linear-engine
@@ -2457,7 +2457,7 @@ test('create account flow', async ({ page }) => {
 |-----------|------------|-------------------|----------|-----|
 | account-manager | JUnit + WireMock | Testcontainers (MySQL) | ✓ | ✓ |
 | connector-service | JUnit + WireMock | Testcontainers (Kafka) | ✓ | ✓ |
-| repo-service | JUnit + WireMock | Testcontainers (MinIO) | ✓ | ✓ |
+| repo-service | JUnit + WireMock | Testcontainers (S3) | ✓ | ✓ |
 | opensearch-manager | JUnit + WireMock | Testcontainers (OpenSearch) | ✓ | ✓ |
 | parser | JUnit | Testcontainers (optional) | ✓ | - |
 | web-proxy | Jest | - | ✓ | ✓ |

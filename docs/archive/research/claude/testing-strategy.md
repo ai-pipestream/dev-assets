@@ -637,11 +637,11 @@ pnpm run test:e2e account-creation.spec.ts
 | Test Type | Focus | Tools | Duration |
 |-----------|-------|-------|----------|
 | Unit | Repository logic | JUnit, WireMock | 30s |
-| Integration | S3 (MinIO), chunked uploads | Testcontainers | 2m 30s |
+| Integration | S3 (SeaweedFS), chunked uploads | Testcontainers | 2m 30s |
 | Dev Mode | File upload testing | Quarkus Dev | Manual |
 
 **Testcontainers Used**:
-- MinIO (S3-compatible)
+- SeaweedFS (S3-compatible)
 - MySQL 8.0
 
 **External Services Mocked**:
@@ -707,7 +707,6 @@ dependencies {
     // Specific containers
     testImplementation 'org.testcontainers:mysql'
     testImplementation 'org.testcontainers:kafka'
-    testImplementation 'org.testcontainers:minio'
     // ... etc
 }
 ```
@@ -743,22 +742,20 @@ static {
 ### Custom Container Configuration
 
 ```java
-// Custom MinIO container for repo-service
+// Custom SeaweedFS container for repo-service
 @Container
-static GenericContainer<?> minio = new GenericContainer<>("minio/minio:latest")
-    .withExposedPorts(9000)
-    .withEnv("MINIO_ROOT_USER", "minioadmin")
-    .withEnv("MINIO_ROOT_PASSWORD", "minioadmin")
-    .withCommand("server /data")
-    .waitingFor(Wait.forHttp("/minio/health/ready").forPort(9000));
+static GenericContainer<?> seaweedfs = new GenericContainer<>("chrislusf/seaweedfs:4.38")
+    .withExposedPorts(8333)
+    .withCommand("server", "-s3", "-dir=/data")
+    .waitingFor(Wait.forListeningPort());
 
 @BeforeAll
-static void setupMinio() {
-    // Configure Quarkus to use MinIO from container
+static void setupSeaweedFs() {
+    // Configure Quarkus to use SeaweedFS from container
     System.setProperty("quarkus.s3.endpoint-override",
-        "http://" + minio.getHost() + ":" + minio.getMappedPort(9000));
-    System.setProperty("quarkus.s3.aws.credentials.static-provider.access-key-id", "minioadmin");
-    System.setProperty("quarkus.s3.aws.credentials.static-provider.secret-access-key", "minioadmin");
+        "http://" + seaweedfs.getHost() + ":" + seaweedfs.getMappedPort(8333));
+    System.setProperty("quarkus.s3.aws.credentials.static-provider.access-key-id", "any");
+    System.setProperty("quarkus.s3.aws.credentials.static-provider.secret-access-key", "any");
 }
 ```
 
