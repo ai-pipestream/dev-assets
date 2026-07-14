@@ -19,7 +19,6 @@ No versions. The BOM handles them.
 
 ```groovy
 implementation 'ai.pipestream:pipestream-server'
-implementation 'ai.pipestream:pipestream-service-registration'
 implementation 'ai.pipestream:quarkus-dynamic-grpc'
 implementation 'ai.pipestream:pipestream-quarkus-devservices'
 ```
@@ -143,63 +142,6 @@ Consul:
 - `GrpcClientFactory` — inject and call `create(serviceName, mutinyStubClass)` to get a Mutiny stub
 - `ServiceDiscovery` / `ServiceDiscoveryProducer` — implement for custom discovery backends
 - `AuthTokenProvider` — implement to supply bearer tokens dynamically
-
----
-
-## `pipestream-service-registration`
-
-**What it gives you:** Automatic registration with Consul on startup, health check registration, re-registration on reconnect, and a `%test` escape hatch that disables registration.
-
-**Key config (`pipestream.registration.*`):**
-
-Top-level:
-
-| Property | Default | Notes |
-|----------|---------|-------|
-| `enabled` | `true` | |
-| `mode` | `direct` | `direct` (Consul) or `grpc` (legacy, avoid) |
-| `required` | `false` | Fail startup on registration failure |
-| `required-timeout` | `10m` | |
-| `service-name` | *(fallback: `quarkus.application.name`)* | |
-| `type` | `SERVICE` | One of `SERVICE`, `MODULE`, `CONNECTOR` — choose based on what the project actually is |
-| `version` | *(fallback: `quarkus.application.version`)* | |
-
-Advertised vs. internal addressing:
-
-| Property | Default | Notes |
-|----------|---------|-------|
-| `advertised-host` | `0.0.0.0` | Client-facing address |
-| `advertised-port` | *(fallback: Quarkus gRPC port)* | |
-| `internal-host` | *(unset)* | Actual bind in Docker/K8s |
-| `internal-port` | *(unset)* | |
-
-Retry + re-registration:
-
-| Property | Default |
-|----------|---------|
-| `retry.max-attempts` | `5` |
-| `retry.initial-delay` | `1s` |
-| `retry.max-delay` | `30s` |
-| `retry.multiplier` | `2.0` |
-| `re-registration.enabled` | `true` |
-| `re-registration.interval` | `30s` |
-
-HTTP health registration:
-
-| Property | Default |
-|----------|---------|
-| `http.enabled` | `true` |
-| `http.health-path` | `/q/health` |
-| `http.scheme` | `http` |
-| `http.tls-enabled` | `false` |
-
-**Standard `%test` pattern:**
-
-```properties
-%test.pipestream.registration.enabled=false
-```
-
-Tests do not register with a real Consul — the `@QuarkusTestResource(ConsulTestResource.class)` fixture doesn't pretend to be the production registry.
 
 ---
 

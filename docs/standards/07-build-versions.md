@@ -30,7 +30,6 @@ dependencies {
 
     // No version on any of these — the BOM owns it:
     implementation 'ai.pipestream:pipestream-server'
-    implementation 'ai.pipestream:pipestream-service-registration'
     implementation 'ai.pipestream:quarkus-dynamic-grpc'
     implementation 'ai.pipestream:quarkus-apicurio-registry-protobuf'
     implementation 'ai.pipestream:pipestream-quarkus-devservices'
