@@ -462,3 +462,78 @@ url = "https://github.com/flyway/flyway.git"
 [[ref_repo]]
 name = "cel-java"
 url = "https://github.com/google/cel-java.git"
+
+# ---- Synced from krick:/work/reference-code 2026-07-18 ------------------
+# quarkus-pr-54938 (detached-HEAD scratch checkout of quarkus) was left out
+# on purpose; re-create it by hand if needed.
+[[ref_repo]]
+name = "buf"
+url = "https://github.com/bufbuild/buf.git"
+
+[[ref_repo]]
+name = "protovalidate"
+url = "https://github.com/bufbuild/protovalidate.git"
+
+[[ref_repo]]
+name = "iceberg"
+url = "https://github.com/apache/iceberg.git"
+
+[[ref_repo]]
+name = "msgraph-connectors-sdk"
+url = "https://github.com/microsoftgraph/msgraph-connectors-sdk.git"
+
+[[ref_repo]]
+name = "opensearch-testcontainers"
+url = "https://github.com/opensearch-project/opensearch-testcontainers.git"
+
+# ---- incoming-projects: NLP / entity-extraction survey clones -----------
+# Mirrors krick:/work/reference-code/incoming-projects (was download.sh
+# there). incoming-projects/lucene is intentionally absent — the top-level
+# lucene entry above covers it.
+[[ref_repo]]
+name = "incoming-projects/spylls"
+url = "https://github.com/zverok/spylls.git"
+
+[[ref_repo]]
+name = "incoming-projects/sudachi"
+url = "https://github.com/WorksApplications/Sudachi.git"
+
+[[ref_repo]]
+name = "incoming-projects/vibrato"
+url = "https://github.com/daac-tools/vibrato.git"
+
+[[ref_repo]]
+name = "incoming-projects/AhoCorasickDoubleArrayTrie"
+url = "https://github.com/hankcs/AhoCorasickDoubleArrayTrie.git"
+
+[[ref_repo]]
+name = "incoming-projects/spacy"
+url = "https://github.com/explosion/spaCy.git"
+
+[[ref_repo]]
+name = "incoming-projects/supar"
+url = "https://github.com/yzhangcs/parser.git"
+
+[[ref_repo]]
+name = "incoming-projects/stanza"
+url = "https://github.com/stanfordnlp/stanza.git"
+
+[[ref_repo]]
+name = "incoming-projects/corenlp"
+url = "https://github.com/stanfordnlp/CoreNLP.git"
+
+[[ref_repo]]
+name = "incoming-projects/duckling"
+url = "https://github.com/facebook/duckling.git"
+
+[[ref_repo]]
+name = "incoming-projects/libphonenumber"
+url = "https://github.com/google/libphonenumber.git"
+
+[[ref_repo]]
+name = "incoming-projects/clavin"
+url = "https://github.com/Berico-Technologies/CLAVIN.git"
+
+[[ref_repo]]
+name = "incoming-projects/mordecai"
+url = "https://github.com/openeventdata/mordecai.git"
