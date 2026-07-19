@@ -313,11 +313,24 @@ name = "docling-java"
 url = "https://github.com/docling-project/docling-java.git"
 
 # ---- NLP -----------------------------------------------------------------
-# Pinned to ai-pipestream's fork because that's where the in-flight
-# thread-safety patches live; switch to apache/opennlp once merged.
+# OpenNLP work happens on GitHub only (the git.rokkon.com copy was removed
+# 2026-07). Three checkouts: the ai-pipestream fork (feature branches), the
+# apache upstream, and an uber-branch checkout for the combined-PR work.
 [[ref_repo]]
 name = "opennlp"
 url = "https://github.com/ai-pipestream/opennlp.git"
+
+[[ref_repo]]
+name = "opennlp-apache"
+url = "https://github.com/apache/opennlp.git"
+
+# The uber branch collects all open-PR work on the fork; until it is pushed
+# the clone falls back to the fork's default branch — `git checkout uber`
+# after it exists.
+[[ref_repo]]
+name = "opennlp-uber"
+url = "https://github.com/ai-pipestream/opennlp.git"
+branch = "uber"
 
 [[ref_repo]]
 name = "opennlp-models"
@@ -531,8 +544,10 @@ name = "incoming-projects/libphonenumber"
 url = "https://github.com/google/libphonenumber.git"
 
 [[ref_repo]]
+# Berico-Technologies/CLAVIN was deleted from GitHub; bigconnect's fork
+# carries the same history. krick's clone is of the deleted original.
 name = "incoming-projects/clavin"
-url = "https://github.com/Berico-Technologies/CLAVIN.git"
+url = "https://github.com/bigconnect/clavin.git"
 
 [[ref_repo]]
 name = "incoming-projects/mordecai"
