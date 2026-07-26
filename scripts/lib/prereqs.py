@@ -132,6 +132,25 @@ def detect_pnpm() -> bool:
     return _cmd_exists("pnpm")
 
 
+def detect_bun() -> bool:
+    """The frontend BFF runs on bun, not node.
+
+    `frontend-bff` in process-compose.yaml is literally `bun --watch src/index.ts`,
+    so the dev grid cannot start the BFF without it. bun installs to ~/.bun/bin
+    which may not be on PATH until a new shell.
+    """
+    return _cmd_exists("bun") or (Path.home() / ".bun" / "bin" / "bun").exists()
+
+
+def detect_buf() -> bool:
+    """buf drives the frontend's protobuf codegen.
+
+    `packages/protobuf-forms` generates its TypeScript stubs with buf; a clean
+    frontend checkout has no generated code, so `pnpm build` fails without it.
+    """
+    return _cmd_exists("buf") or (Path.home() / ".local" / "bin" / "buf").exists()
+
+
 def detect_process_compose() -> bool:
     if _cmd_exists("process-compose"):
         return True
@@ -273,6 +292,37 @@ def install_pnpm_only() -> None:
     '''
     _run_shell(script)
     ui.ok("pnpm enabled")
+
+
+def install_bun() -> None:
+    ui.info("Running: curl -fsSL https://bun.sh/install | bash")
+    _run_shell("curl -fsSL https://bun.sh/install | bash")
+    ui.ok("bun installed (binary at ~/.bun/bin/bun)")
+
+
+def install_buf() -> None:
+    """Install buf via npm on the active node, falling back to the release binary.
+
+    npm keeps buf next to node so it lands on the same PATH pnpm already needs;
+    the direct download is the fallback for hosts where node is present but the
+    npm registry is not reachable.
+    """
+    target_dir = Path.home() / ".local" / "bin"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    ui.info("Installing buf (npm @bufbuild/buf, falling back to the release binary)...")
+    _run_shell(f'''
+        set -e
+        if command -v npm >/dev/null 2>&1 && npm install -g @bufbuild/buf; then
+            echo ">> buf installed via npm"
+            exit 0
+        fi
+        echo ">> npm route unavailable; downloading the release binary..."
+        OS="$(uname -s)"; ARCH="$(uname -m)"
+        curl -fsSL "https://github.com/bufbuild/buf/releases/latest/download/buf-${{OS}}-${{ARCH}}" \\
+            -o "{target_dir}/buf"
+        chmod +x "{target_dir}/buf"
+    ''')
+    ui.ok("buf installed")
 
 
 def install_process_compose() -> None:
@@ -466,6 +516,22 @@ def get_prereqs() -> list[Prereq]:
             detect=detect_pnpm,
             install=install_pnpm_only,
             install_hint="enable pnpm (via corepack)",
+            needs_shell_refresh=True,
+        ),
+        Prereq(
+            name="bun",
+            detect=detect_bun,
+            install=install_bun,
+            install_hint="bun runtime via bun.sh installer",
+            notes="The frontend BFF process is `bun --watch src/index.ts`.",
+            needs_shell_refresh=True,
+        ),
+        Prereq(
+            name="buf",
+            detect=detect_buf,
+            install=install_buf,
+            install_hint="buf CLI (npm @bufbuild/buf, or the release binary)",
+            notes="Drives the frontend's protobuf TypeScript codegen.",
             needs_shell_refresh=True,
         ),
         Prereq(

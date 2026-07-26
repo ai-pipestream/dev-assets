@@ -34,6 +34,7 @@ installer never writes credentials into gradle.properties itself.
 from __future__ import annotations
 
 import shutil
+import time
 from pathlib import Path
 
 from . import ui
@@ -45,10 +46,12 @@ LOCAL_BIN = Path.home() / ".local" / "bin"
 GRADLE_DIR = Path.home() / ".gradle"
 
 # Files at ~/.pipeline/<file>
+# seaweedfs-s3-config.json is gone: the S3-compat container is rustfs, which
+# needs no bind-mounted auth config (credentials come from RUSTFS_ACCESS_KEY /
+# RUSTFS_SECRET_KEY) and creates its bucket via the rustfs-init one-shot.
 _ROOT_FILES = [
     "compose-devservices.yml",
     "init-postgres.sql",
-    "seaweedfs-s3-config.json",
 ]
 
 # Subdirs copied at ~/.pipeline/<dir> (none today; consul-config died with
@@ -61,10 +64,25 @@ _DEV_FILES = [
     "process-compose.env.example",
     "check-infra-healthy.sh",
     "check-djl-healthy.sh",
+    "dev-grid-health.sh",
     "start-dev-djl.sh",
     "register-dev-djl-models.sh",
     "nvidia-gpu-setup.sh",
 ]
+
+# Files at ~/.pipeline/dev/<file> that come from THIS repo's assets/dev/
+# rather than the platform extension. The tmux grid launchers lived only on
+# one developer's disk until 2026-07-26 — unreproducible by construction.
+_DEV_ASSET_FILES = [
+    "dev-grid.sh",
+    "dev-pane.sh",
+    "dev-grid-kitty.sh",
+]
+
+# Executable bit is set on these after copying (shutil.copy2 preserves mode,
+# but a checkout that lost the bit — e.g. a zip export — would seed a file
+# process-compose cannot run).
+_EXECUTABLE_SUFFIXES = (".sh",)
 
 
 def _platform_resources_dir(ws: Workspace) -> Path | None:
@@ -75,7 +93,14 @@ def _platform_resources_dir(ws: Workspace) -> Path | None:
             / "runtime" / "src" / "main" / "resources")
 
 
-def seed(ws: Workspace, dry_run: bool = False) -> int:
+def seed(ws: Workspace, dry_run: bool = False, force: bool = False) -> int:
+    """Copy the seed-managed files into ~/.pipeline/, ~/.local/bin and ~/.gradle.
+
+    :param ws: the loaded workspace manifest
+    :param dry_run: report only, touch nothing
+    :param force: overwrite locally-modified destinations without a backup
+    :return: 0 on success, 1 when any copy failed
+    """
     src_root = _platform_resources_dir(ws)
     if src_root is None:
         ui.error("pipestream-platform missing from manifest")
@@ -100,25 +125,31 @@ def seed(ws: Workspace, dry_run: bool = False) -> int:
 
     failed = 0
     for fname in _ROOT_FILES:
-        if not _copy(src_root / fname, PIPELINE_DIR / fname, dry_run):
+        if not _copy(src_root / fname, PIPELINE_DIR / fname, dry_run, force):
             failed += 1
 
     for d in _ROOT_SUBDIRS:
-        if not _copy(src_root / d, PIPELINE_DIR / d, dry_run):
+        if not _copy(src_root / d, PIPELINE_DIR / d, dry_run, force):
             failed += 1
 
     for fname in _DEV_FILES:
-        if not _copy(src_root / fname, PIPELINE_DEV_DIR / fname, dry_run):
+        if not _copy(src_root / fname, PIPELINE_DEV_DIR / fname, dry_run, force):
             failed += 1
 
-    # dev-services wrapper + Gradle init script, both from dev-assets (this repo)
+    # dev-services wrapper + Gradle init script + the tmux grid launchers, all
+    # from dev-assets (this repo)
     dev_assets_root = Path(__file__).resolve().parents[2]
     wrapper = dev_assets_root / "assets" / "dev-services"
-    if not _copy(wrapper, LOCAL_BIN / "dev-services", dry_run):
+    if not _copy(wrapper, LOCAL_BIN / "dev-services", dry_run, force):
         failed += 1
 
+    for fname in _DEV_ASSET_FILES:
+        src = dev_assets_root / "assets" / "dev" / fname
+        if not _copy(src, PIPELINE_DEV_DIR / fname, dry_run, force):
+            failed += 1
+
     gradle_init = dev_assets_root / "assets" / "gradle-init.gradle"
-    if not _copy(gradle_init, GRADLE_DIR / "init.gradle", dry_run):
+    if not _copy(gradle_init, GRADLE_DIR / "init.gradle", dry_run, force):
         failed += 1
     ui.plain("")
     if (GRADLE_DIR / "gradle.properties").exists():
@@ -144,13 +175,26 @@ def seed(ws: Workspace, dry_run: bool = False) -> int:
     return 0
 
 
-def _copy(src: Path, dst: Path, dry_run: bool) -> bool:
-    """Copy src to dst, replacing whatever was there. Returns True on success.
+def _copy(src: Path, dst: Path, dry_run: bool, force: bool = False) -> bool:
+    """Copy src to dst. Returns True on success.
 
     - A leftover symlink at dst (from a pre-copy-mode seed) is removed first.
-    - A real file/dir at dst is overwritten — these are seed-managed outputs,
-      not user-edited files, so clobbering on re-seed is intended.
+    - **A destination whose content differs from the source is BACKED UP first**,
+      to ``<name>.local-<timestamp>.bak``, and the backup is named in the output.
+      This used to delete the destination outright and protect only ``.env``,
+      which meant a hand-edit to ``~/.pipeline/dev/process-compose.yaml`` — the
+      file the running grid is actually driven by — vanished on the next seed
+      with no warning and no copy. Local edits to these files are how people
+      debug the grid; losing them silently is not an acceptable default.
+    - ``force=True`` overwrites without a backup (for callers that have already
+      reconciled, and for the identical-content case where a backup is noise).
     - If src does not exist: warn and skip (returns True — not a hard fail).
+
+    :param src: file or directory to copy from
+    :param dst: destination path
+    :param dry_run: when True, report only
+    :param force: when True, skip the differs-from-source backup
+    :return: True on success
     """
     if not src.exists():
         ui.warn(f"source missing in extension: {src.name} (skipping)")
@@ -159,7 +203,14 @@ def _copy(src: Path, dst: Path, dry_run: bool) -> bool:
     short_dst = _shorten(dst)
 
     if dst.is_symlink() or dst.exists():
-        if not dry_run:
+        if not force and _differs(src, dst):
+            backup = _backup_path(dst)
+            if dry_run:
+                ui.warn(f"would BACK UP local changes: {short_dst} -> {_shorten(backup)}")
+            else:
+                shutil.move(str(dst), str(backup))
+                ui.warn(f"local copy differed — backed up to {_shorten(backup)}")
+        if not dry_run and (dst.is_symlink() or dst.exists()):
             if dst.is_dir() and not dst.is_symlink():
                 shutil.rmtree(dst)
             else:
@@ -170,8 +221,82 @@ def _copy(src: Path, dst: Path, dry_run: bool) -> bool:
             shutil.copytree(src, dst)
         else:
             shutil.copy2(src, dst)
+            if dst.suffix in _EXECUTABLE_SUFFIXES:
+                dst.chmod(dst.stat().st_mode | 0o111)
     ui.ok(f"copied: {short_dst} <- {src}")
     return True
+
+
+def _differs(src: Path, dst: Path) -> bool:
+    """True when dst holds content the source would not reproduce.
+
+    Directories are compared shallowly by name set; that is enough for the one
+    directory case this seeder has ever had, and a false positive only costs a
+    backup nobody needed.
+
+    :param src: source path
+    :param dst: destination path
+    :return: True when the two differ
+    """
+    if dst.is_symlink():
+        return True
+    if src.is_dir() != dst.is_dir():
+        return True
+    if src.is_dir():
+        return sorted(p.name for p in src.iterdir()) != sorted(p.name for p in dst.iterdir())
+    try:
+        return src.read_bytes() != dst.read_bytes()
+    except OSError:
+        return True
+
+
+def _backup_path(dst: Path) -> Path:
+    """A non-colliding ``<name>.local-<timestamp>.bak`` next to dst.
+
+    :param dst: the file about to be replaced
+    :return: a path that does not yet exist
+    """
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    candidate = dst.with_name(f"{dst.name}.local-{stamp}.bak")
+    n = 1
+    while candidate.exists():
+        candidate = dst.with_name(f"{dst.name}.local-{stamp}-{n}.bak")
+        n += 1
+    return candidate
+
+
+def diff_report(ws: Workspace) -> list[tuple[Path, Path]]:
+    """Seed-managed destinations whose content differs from their source.
+
+    Powers ``./bootstrap.sh drift``: answers "would a seed change anything?"
+    without touching disk. A non-empty result before a seed means someone has
+    hand-edited the live rig and that edit is about to be backed up rather than
+    carried into git — which is the moment to reconcile it upstream.
+
+    :param ws: the loaded workspace manifest
+    :return: (source, destination) pairs that differ
+    """
+    src_root = _platform_resources_dir(ws)
+    out: list[tuple[Path, Path]] = []
+    if src_root is None or not src_root.exists():
+        return out
+    dev_assets_root = Path(__file__).resolve().parents[2]
+
+    pairs: list[tuple[Path, Path]] = []
+    pairs += [(src_root / f, PIPELINE_DIR / f) for f in _ROOT_FILES]
+    pairs += [(src_root / d, PIPELINE_DIR / d) for d in _ROOT_SUBDIRS]
+    pairs += [(src_root / f, PIPELINE_DEV_DIR / f) for f in _DEV_FILES]
+    pairs += [(dev_assets_root / "assets" / "dev" / f, PIPELINE_DEV_DIR / f)
+              for f in _DEV_ASSET_FILES]
+    pairs.append((dev_assets_root / "assets" / "dev-services", LOCAL_BIN / "dev-services"))
+    pairs.append((dev_assets_root / "assets" / "gradle-init.gradle", GRADLE_DIR / "init.gradle"))
+
+    for src, dst in pairs:
+        if not src.exists() or not dst.exists():
+            continue
+        if _differs(src, dst):
+            out.append((src, dst))
+    return out
 
 
 def _render_gid() -> int | None:
@@ -208,6 +333,7 @@ def _write_default_env(env_file: Path, ws: Workspace, dry_run: bool) -> None:
 
 CORE_SERVICES_DIR={core}
 MODULES_DIR={modules}
+CONNECTORS_DIR={connectors}
 PC_PORT_NUM=8765
 
 # Dev wiring — process-compose exports these to every service.
@@ -219,8 +345,9 @@ PIPESTREAM_REGISTRATION_REGISTRATION_SERVICE_PORT=18101
 # Silence JDK 25 native-access warnings (Netty / AWS SDK) on every forked dev JVM.
 JDK_JAVA_OPTIONS=--enable-native-access=ALL-UNNAMED
 
-# Connectors moved out of core-services in the new layout — point at them
-# explicitly so process-compose.yaml's defaults pick up the right paths.
+# Per-service working_dir overrides. CONNECTORS_DIR above already covers the
+# default layout; these stay as the place to point a single service at a git
+# worktree without moving the whole tree.
 JDBC_CONNECTOR_DIR={connectors}/jdbc-connector
 S3_CONNECTOR_DIR={connectors}/s3-connector
 """

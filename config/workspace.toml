@@ -219,9 +219,75 @@ name = "quarkus-grpc-gatherer"
 path = "main/dev-tools"
 name = "quarkus-buf-grpc-generator"
 
+# pipestream-proto-tools was removed from Forgejo; the entry here made
+# `bootstrap clone` fail on a 404 for every fresh machine. Deleted 2026-07-26 —
+# any on-disk checkout is left alone.
+
 [[repo]]
 path = "main/dev-tools"
-name = "pipestream-proto-tools"
+name = "pipestream-build-conventions"
+
+
+# ---- deploy -------------------------------------------------------------
+# The compose stack and the release train. Both were missing, so a fresh
+# `bootstrap clone` produced a workspace that could neither bring up the docker
+# stack nor cut a release — the two things the bootstrap exists to enable.
+# Directory names differ from the repo names (deploy/compose-stack, not
+# deploy/pipestream-compose-stack) to match the paths every script and doc in
+# the workspace already uses.
+[[repo]]
+path = "main/deploy"
+name = "pipestream-compose-stack"
+dir_name = "compose-stack"
+
+[[repo]]
+path = "main/deploy"
+name = "pipestream-release"
+dir_name = "release"
+
+
+# ---- core-services/test-docs -------------------------------------------
+# Court-fixture Maven test jars, one repo per pipeline stage. The e2e suite
+# consumes these; without them the pipeline-crawl battery has no corpus.
+# There is no single "test-docs" repo — the directory is a container for the
+# per-stage repos below (see CLAUDE.md, "Court-fixture jars").
+# opensearch-sink ships split pt1/pt2 because the combined jar exceeded the
+# Maven Central size cap; all three entries are real repos.
+[[repo]]
+path = "main/core-services/test-docs"
+name = "_template-input-court"
+
+[[repo]]
+path = "main/core-services/test-docs"
+name = "chunker-input-court"
+
+[[repo]]
+path = "main/core-services/test-docs"
+name = "embedder-input-court"
+
+[[repo]]
+path = "main/core-services/test-docs"
+name = "embedder-pipedocs-court"
+
+[[repo]]
+path = "main/core-services/test-docs"
+name = "opensearch-sink-input-court"
+
+[[repo]]
+path = "main/core-services/test-docs"
+name = "opensearch-sink-input-court-pt1"
+
+[[repo]]
+path = "main/core-services/test-docs"
+name = "opensearch-sink-input-court-pt2"
+
+[[repo]]
+path = "main/core-services/test-docs"
+name = "pipedocs-court-1000"
+
+[[repo]]
+path = "main/core-services/test-docs"
+name = "semantic-graph-input-court"
 
 
 # ============================================================================

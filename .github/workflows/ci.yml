@@ -1,0 +1,53 @@
+name: CI
+
+# dev-assets had no CI at all, so the bootstrap — the one thing a new machine
+# runs before anything else works — was the only untested code in the workspace.
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+  pull_request:
+    branches: [ main ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Bootstrap tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pytest
+        run: python -m pip install --upgrade pip pytest
+
+      - name: Unit tests
+        run: pytest scripts/tests -q
+
+      # The manifest is data, and a typo in it only shows up as a 404 partway
+      # through someone's first clone. `clone --list` resolves every entry
+      # without touching the network.
+      - name: Manifest resolves
+        run: ./bootstrap.sh clone --list
+
+      - name: Prereq detection runs (report only, installs nothing)
+        run: ./bootstrap.sh check --skip-install || true
+
+      - name: Shell scripts parse
+        run: |
+          set -e
+          for f in bootstrap.sh assets/dev-services assets/dev/*.sh scripts/*.sh; do
+            [ -f "$f" ] || continue
+            bash -n "$f" && echo "ok  $f"
+          done
