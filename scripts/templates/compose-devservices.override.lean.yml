@@ -25,4 +25,4 @@ services:
     profiles: ["off"]            # UI only
 
   # kept local (no override needed): kafka, apicurio-registry, postgres,
-  # consul, seaweedfs
+  # rustfs (+ rustfs-init)

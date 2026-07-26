@@ -3,10 +3,11 @@
 Mirrors the layout krick uses:
   ~/.pipeline/compose-devservices.yml      -> platform extension src
   ~/.pipeline/init-postgres.sql            -> platform extension src
-  ~/.pipeline/seaweedfs-s3-config.json     -> platform extension src
 
   ~/.pipeline/dev/process-compose.yaml     -> platform extension src
   ~/.pipeline/dev/check-*.sh               -> platform extension src
+  ~/.pipeline/dev/dev-grid-health.sh       -> platform extension src
+  ~/.pipeline/dev/dev-grid*.sh, dev-pane.sh -> dev-assets/assets/dev/
   ~/.pipeline/dev/start-dev-djl.sh         -> platform extension src
   ~/.pipeline/dev/register-dev-djl-models.sh
   ~/.pipeline/dev/nvidia-gpu-setup.sh
