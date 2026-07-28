@@ -12,6 +12,28 @@ PROCESS_COMPOSE_YAML = PIPELINE_DEV_DIR / "process-compose.yaml"
 ENV_FILE = PIPELINE_DEV_DIR / ".env"
 
 
+def pc_port(env_file: Path = ENV_FILE) -> str:
+    """The process-compose API port the grid is expected on.
+
+    PC_PORT_NUM in ~/.pipeline/dev/.env is read by process-compose only for
+    yaml template substitution — it does NOT set the server's own API port,
+    so a bare `process-compose up` serves on its built-in default (8080)
+    while the health gate polls the .env's 8765 and reports a dead grid.
+    The port must be passed explicitly; every launcher and poller goes
+    through this one reader.
+    """
+    try:
+        for line in env_file.read_text().splitlines():
+            line = line.strip()
+            if line.startswith("PC_PORT_NUM="):
+                value = line.split("=", 1)[1].strip()
+                if value:
+                    return value
+    except OSError:
+        pass
+    return "8765"
+
+
 def up(detached: bool = True) -> int:
     if not _ensure_seeded():
         return 1
@@ -20,7 +42,8 @@ def up(detached: bool = True) -> int:
     if not shutil.which("process-compose"):
         ui.error("process-compose not on PATH — run `./bootstrap.sh check` first.")
         return 1
-    cmd = ["process-compose", "up", "-f", str(PROCESS_COMPOSE_YAML)]
+    cmd = ["process-compose", "up", "-f", str(PROCESS_COMPOSE_YAML),
+           "--port", pc_port()]
     if detached:
         cmd.append("--detached")
     ui.info(f"cwd: {PIPELINE_DEV_DIR}")
@@ -32,7 +55,8 @@ def down() -> int:
     if not shutil.which("process-compose"):
         ui.error("process-compose not on PATH")
         return 1
-    cmd = ["process-compose", "down", "-f", str(PROCESS_COMPOSE_YAML)]
+    cmd = ["process-compose", "down", "-f", str(PROCESS_COMPOSE_YAML),
+           "--port", pc_port()]
     ui.info(f"cwd: {PIPELINE_DEV_DIR}")
     ui.info(f"running: {' '.join(cmd)}")
     return subprocess.run(cmd, cwd=str(PIPELINE_DEV_DIR)).returncode
