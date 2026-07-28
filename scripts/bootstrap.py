@@ -10,7 +10,8 @@ Subcommands:
                   install + build the frontend.
   seed            Seed ~/.pipeline/ from the platform extension's resources.
   drift           Report seeded files whose live copy differs from git.
-  dev-up          Start the process-compose dev stack.
+  dev-up          Start the process-compose dev stack (refuses when the ports
+                  it declares are already held; --ignore-held-ports overrides).
   dev-health      Gate on the running dev grid (exits nonzero when it is wrong).
   dev-down        Stop the process-compose dev stack.
   reference-sync  Clone/update the reference-code repos (OSS upstreams).
@@ -89,7 +90,8 @@ def cmd_all(args: argparse.Namespace) -> int:
 
 
 def cmd_dev_up(args: argparse.Namespace) -> int:
-    return dev_compose.up(detached=not args.attach)
+    return dev_compose.up(detached=not args.attach,
+                          ignore_held_ports=args.ignore_held_ports)
 
 
 def cmd_dev_down(args: argparse.Namespace) -> int:
@@ -111,7 +113,8 @@ def cmd_reference_sync(args: argparse.Namespace) -> int:
     return git_sync.sync_refs(ws, mode=mode)
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """The full subcommand parser. Separate from main() so it is testable."""
     parser = argparse.ArgumentParser(
         prog="bootstrap",
         description=__doc__,
@@ -197,10 +200,22 @@ def main() -> int:
     p_up = sub.add_parser(
         "dev-up",
         help="Start the process-compose dev stack",
-        description="Run `process-compose up` against ~/.pipeline/dev/process-compose.yaml.",
+        description="Run `process-compose up` against "
+                    "~/.pipeline/dev/process-compose.yaml, after a preflight "
+                    "that refuses to launch when any port the yaml declares "
+                    "(every readiness probe's, plus the process-compose API "
+                    "port) is already held. Orphans from a killed grid keep "
+                    "answering health probes while the new processes die on "
+                    "'address already in use', so the health gate would go "
+                    "green against ghosts running stale config.",
     )
     p_up.add_argument("--attach", action="store_true",
                       help="Run process-compose in foreground (default: detached)")
+    p_up.add_argument("--ignore-held-ports", action="store_true",
+                      help="Launch even when declared ports are already held "
+                           "(prints the offender table anyway). You are opting "
+                           "into a grid that is part new processes, part "
+                           "whatever was already there.")
     p_up.set_defaults(func=cmd_dev_up)
 
     p_health = sub.add_parser(
@@ -274,7 +289,11 @@ def main() -> int:
                        help="Also fast-forward existing clones (default: skip existing)")
     p_ref.set_defaults(func=cmd_reference_sync)
 
-    args = parser.parse_args()
+    return parser
+
+
+def main() -> int:
+    args = build_parser().parse_args()
     try:
         return args.func(args)
     except KeyboardInterrupt:
