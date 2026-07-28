@@ -78,12 +78,21 @@ host-local `quarkus dev` process with hot reload, on top of shared infra
 containers. This is the rig for changing code.
 
 ```bash
-./bootstrap.sh dev-up          # start
+./bootstrap.sh dev-up          # start (refuses when the grid's ports are held)
 ./bootstrap.sh dev-health      # is it actually usable?
 ./bootstrap.sh dev-down        # stop
 process-compose attach -p 8765 # the TUI
 tail -f ~/.pipeline/dev/logs/<process>.log
 ```
+
+`dev-up` preflights every port `process-compose.yaml` declares (each readiness
+probe's, plus the process-compose API port) and refuses to launch with a
+`PORT / PID / DECLARED BY / COMMAND` table when any is already held — by the
+docker stack, or by orphans a killed grid left behind. Those orphans are the
+dangerous case: the new processes die on "address already in use" while the
+orphans keep answering health probes, so `dev-health` goes green against ghosts
+running stale config. Tear down (`dev-down`), kill whatever survives, then
+re-run. `dev-up --ignore-held-ports` launches anyway, table and all.
 
 **Docker stack (`deploy/compose-stack`)** — every service as a built image.
 This is the rig for testing what ships.
