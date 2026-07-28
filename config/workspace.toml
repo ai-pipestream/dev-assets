@@ -206,9 +206,11 @@ path = "main/dev-tools"
 name = "pipestream-docker"
 dir_name = "docker-integration-tests"
 
-[[repo]]
-path = "main/dev-tools"
-name = "pipestream-integration-tests"
+# pipestream-integration-tests was dropped 2026-07-28: its HappyPathRunner
+# rotted against the current protos (CreateDatasourceInstance / EngineV1Service
+# are long gone), nothing in CI builds it, and module-testing-sidecar's
+# pipeline-crawl harness supersedes it. Only renovate was keeping it warm.
+# Restore the [[repo]] block if the repo is ever brought back to compiling.
 
 [[repo]]
 path = "main/dev-tools"
