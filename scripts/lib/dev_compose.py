@@ -167,8 +167,11 @@ def down() -> int:
     if not shutil.which("process-compose"):
         ui.error("process-compose not on PATH")
         return 1
-    cmd = ["process-compose", "down", "-f", str(PROCESS_COMPOSE_YAML),
-           "--port", pc_port()]
+    # `down` addresses the RUNNING server (port only); unlike `up` it takes
+    # no -f flag, and passing one makes it exit on a usage error WITHOUT
+    # stopping anything, which left the whole grid running behind a
+    # "dev-down" that looked like it worked.
+    cmd = ["process-compose", "down", "--port", pc_port()]
     ui.info(f"cwd: {PIPELINE_DEV_DIR}")
     ui.info(f"running: {' '.join(cmd)}")
     return subprocess.run(cmd, cwd=str(PIPELINE_DEV_DIR)).returncode

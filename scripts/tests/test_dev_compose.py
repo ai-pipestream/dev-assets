@@ -298,3 +298,30 @@ def test_dev_up_defaults_to_refusing(monkeypatch):
     args = bootstrap.build_parser().parse_args(["dev-up"])
     args.func(args)
     assert seen["ignore_held_ports"] is False
+
+
+def test_down_addresses_the_server_without_a_compose_file_flag(monkeypatch, tmp_path):
+    """`process-compose down` takes no -f flag: passing one makes it exit on
+    a usage error WITHOUT stopping anything, so dev-down looked successful
+    while the whole grid kept running (caught by the release-train cycle's
+    port-silence gate)."""
+    from lib import dev_compose
+
+    env = tmp_path / ".env"
+    env.write_text("PC_PORT_NUM=8765\n")
+    monkeypatch.setattr(dev_compose, "ENV_FILE", env)
+    recorded = {}
+
+    def fake_run(cmd, cwd=None):
+        recorded["cmd"] = cmd
+
+        class R:
+            returncode = 0
+
+        return R()
+
+    monkeypatch.setattr(dev_compose.shutil, "which", lambda _: "/usr/bin/process-compose")
+    monkeypatch.setattr(dev_compose.subprocess, "run", fake_run)
+    assert dev_compose.down() == 0
+    assert recorded["cmd"] == ["process-compose", "down", "--port", "8765"]
+    assert "-f" not in recorded["cmd"]
