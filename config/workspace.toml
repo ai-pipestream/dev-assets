@@ -7,9 +7,16 @@
 
 [workspace]
 # Workspace root. Repos are cloned under <root>/<path>/<name>.
-# The agreed layout: <root>/main/<category>/<repo> for canonical-branch
+# The agreed layout: <root>/<tree>/<category>/<repo> for canonical-branch
 # checkouts and <root>/worktrees/ for in-progress branch worktrees.
 root = "/work"
+
+# First path segment under root. The manifest below is written against
+# "main"; setting tree = "integration" in a per-machine override relocates
+# the ENTIRE layout (repos and reference-code) under /work/integration
+# without touching the manifest. Used for the krick-1 integration
+# environment that mirrors main.
+tree = "main"
 
 # Maven local repository. The default below puts it on the workspace
 # disk (typically faster than $HOME). Set to "$HOME/.m2/repository" or
@@ -564,6 +571,61 @@ url = "https://github.com/microsoftgraph/msgraph-connectors-sdk.git"
 [[ref_repo]]
 name = "opensearch-testcontainers"
 url = "https://github.com/opensearch-project/opensearch-testcontainers.git"
+
+# ---- Synced from krick:/work/reference-code 2026-07-28 ------------------
+# The remainder of krick's on-disk reference tree that the manifest did not
+# yet carry. opennlp (a remote-less working tree) and quarkus-pr-54938
+# (detached-HEAD scratch) stay out on purpose.
+[[ref_repo]]
+name = "calamine"
+url = "https://github.com/tafia/calamine.git"
+
+[[ref_repo]]
+name = "debezium-quarkus"
+url = "https://github.com/debezium/debezium-quarkus.git"
+
+[[ref_repo]]
+name = "fast_html_parser"
+url = "https://github.com/mehmetcansahin/fast_html_parser.git"
+
+[[ref_repo]]
+name = "fieldmask-utils"
+url = "https://github.com/mennanov/fieldmask-utils.git"
+
+[[ref_repo]]
+# Agent Client Protocol Java SDK (checkout dir keeps the upstream repo name).
+name = "java-sdk"
+url = "https://github.com/agentclientprotocol/java-sdk.git"
+
+[[ref_repo]]
+# Multi-GB clone — LibreOffice core, used by grpc-libreoffice (UNO/LOK).
+# Lands at reference-code/libreoffice/core to match krick's layout.
+name = "libreoffice/core"
+url = "https://github.com/LibreOffice/core.git"
+
+[[ref_repo]]
+name = "lol-html"
+url = "https://github.com/cloudflare/lol-html.git"
+
+[[ref_repo]]
+name = "opencrawling"
+url = "https://github.com/opencrawling/opencrawling.git"
+
+[[ref_repo]]
+name = "open_model_zoo"
+url = "https://github.com/openvinotoolkit/open_model_zoo.git"
+
+[[ref_repo]]
+name = "poi"
+url = "https://github.com/apache/poi.git"
+
+[[ref_repo]]
+name = "schema-registry"
+url = "https://github.com/confluentinc/schema-registry.git"
+
+[[ref_repo]]
+name = "testcontainers-java"
+url = "https://github.com/testcontainers/testcontainers-java.git"
 
 # ---- incoming-projects: NLP / entity-extraction survey clones -----------
 # Mirrors krick:/work/reference-code/incoming-projects (was download.sh

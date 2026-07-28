@@ -31,9 +31,28 @@ def test_repo_destinations_are_unique():
 
 def test_deploy_repos_are_in_the_manifest():
     """Without these a fresh clone cannot bring up the stack or cut a release."""
-    dests = {r.relative_dest() for r in _ws().repos}
-    assert "main/deploy/compose-stack" in dests
-    assert "main/deploy/release" in dests
+    ws = _ws()
+    dests = {r.relative_dest() for r in ws.repos}
+    assert f"{ws.tree}/deploy/compose-stack" in dests
+    assert f"{ws.tree}/deploy/release" in dests
+
+
+def test_workspace_tree_relocates_the_whole_layout(tmp_path, monkeypatch):
+    """workspace.tree swaps the first path segment for every repo and
+    reference repo: an integration box clones the same manifest under
+    /work/integration instead of /work/main, nothing else moves."""
+    base = _ws()
+    override_dir = tmp_path / "ai-pipestream"
+    override_dir.mkdir()
+    (override_dir / "workspace.toml").write_text('[workspace]\ntree = "integration"\n')
+    monkeypatch.setattr(manifest, "_USER_OVERRIDE_PATH", override_dir / "workspace.toml")
+    ws = manifest.load()
+    assert ws.tree == "integration"
+    assert all(r.path.split("/", 1)[0] == "integration" for r in ws.repos)
+    assert all(r.ref_path == "integration/reference-code" for r in ws.ref_repos)
+    # the tail of every path is untouched
+    assert {r.path.partition("/")[2] for r in ws.repos} == \
+        {r.path.partition("/")[2] for r in base.repos}
 
 
 def test_build_conventions_is_in_the_manifest():
@@ -44,11 +63,12 @@ def test_build_conventions_is_in_the_manifest():
 def test_court_fixture_repos_are_in_the_manifest():
     """The e2e suite consumes these per-stage corpora; there is no single
     test-docs repo, so each stage repo needs its own entry."""
-    dests = {r.relative_dest() for r in _ws().repos}
+    ws = _ws()
+    dests = {r.relative_dest() for r in ws.repos}
     for stage in ("chunker-input-court", "embedder-input-court",
                   "opensearch-sink-input-court", "semantic-graph-input-court",
                   "pipedocs-court-1000"):
-        assert f"main/core-services/test-docs/{stage}" in dests, f"missing {stage}"
+        assert f"{ws.tree}/core-services/test-docs/{stage}" in dests, f"missing {stage}"
 
 
 def test_dead_proto_tools_entry_is_gone():

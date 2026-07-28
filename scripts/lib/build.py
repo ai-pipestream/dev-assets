@@ -45,10 +45,12 @@ _PREBUILD_TASK = "classes"
 
 # Repos that are not gradle builds and must never be handed to ./gradlew.
 # The frontend has its own phase; the court-fixture and corpus repos are data.
+# Written tree-relative (no leading "main"/"integration" segment) so the
+# check holds under any workspace.tree.
 _NON_GRADLE_PATH_PREFIXES = (
-    "main/frontend",
-    "main/core-services/test-docs",
-    "main/deploy",
+    "frontend",
+    "core-services/test-docs",
+    "deploy",
 )
 _NON_GRADLE_NAMES = frozenset({
     "dev-assets",
@@ -135,7 +137,7 @@ def gradle_repos(ws: Workspace) -> list[Repo]:
             continue
         if r.name in _NON_GRADLE_NAMES:
             continue
-        if any(r.path.startswith(p) for p in _NON_GRADLE_PATH_PREFIXES):
+        if any(r.path.partition("/")[2].startswith(p) for p in _NON_GRADLE_PATH_PREFIXES):
             continue
         out.append(r)
     return out
