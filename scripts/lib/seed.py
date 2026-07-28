@@ -356,6 +356,12 @@ S3_CONNECTOR_DIR={connectors}/s3-connector
 # from CORE_SERVICES_DIR, so a workspace on any other tree silently runs
 # the WRONG checkout's BFF unless this is set explicitly.
 FRONTEND_DIR={ws.root / ws.tree}/frontend/pipestream-frontend
+
+# Every host runs a local DJL on 8090 (start-dev-djl.sh: GPU or CPU on
+# NVIDIA/plain hosts, CPU alongside OVMS on Intel hosts). DJL-only
+# consumers (semantic-graph's djl-serving REST client) read this from the
+# global env; their %dev default points at a dead port.
+EMBEDDER_DJL_SERVING_URL=http://localhost:8090
 """
     render_gid = _render_gid()
     if render_gid is not None:
