@@ -124,3 +124,19 @@ def test_health_gate_passes_the_wait_deadline(monkeypatch, tmp_path):
 
 def test_phase_names_match_the_documented_order():
     assert oneshot.PHASES == ("check", "clone", "build", "seed", "dev-up", "health")
+
+
+def test_pc_port_comes_from_the_env_file(tmp_path):
+    """PC_PORT_NUM in the .env only feeds yaml templating — process-compose
+    itself defaults to 8080 unless the port is passed explicitly, which made
+    dev-up serve on 8080 while the health gate polled 8765 and declared a
+    running grid dead. The launcher and the gate both read this value."""
+    from lib import dev_compose
+
+    env = tmp_path / ".env"
+    env.write_text("FOO=bar\nPC_PORT_NUM=9911\n")
+    assert dev_compose.pc_port(env) == "9911"
+    # missing file or missing key falls back to the seeded default
+    assert dev_compose.pc_port(tmp_path / "absent") == "8765"
+    env.write_text("PC_PORT_NUM=\n")
+    assert dev_compose.pc_port(env) == "8765"

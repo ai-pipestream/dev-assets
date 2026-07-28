@@ -14,6 +14,7 @@ that only want the workspace.
 """
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -129,9 +130,12 @@ def _health_gate(wait_seconds: int) -> int:
         ui.error("bash not on PATH — cannot run the health gate.")
         return 70
 
+    # The gate's own default port must match the port dev-up launched
+    # process-compose on — both sides read the same .env value.
+    env = dict(os.environ, PC_PORT_NUM=dev_compose.pc_port())
     cmd = ["bash", str(HEALTH_GATE), "--wait", str(wait_seconds)]
-    ui.info(f"running: {' '.join(cmd)}")
-    rc = subprocess.run(cmd).returncode
+    ui.info(f"running: {' '.join(cmd)} (PC_PORT_NUM={env['PC_PORT_NUM']})")
+    rc = subprocess.run(cmd, env=env).returncode
     if rc != 0:
         ui.error(f"Dev grid is NOT healthy ({rc} problem(s) above).")
         ui.info("Per-service logs: ~/.pipeline/dev/logs/<process>.log")
