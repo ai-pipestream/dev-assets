@@ -351,6 +351,11 @@ JDK_JAVA_OPTIONS=--enable-native-access=ALL-UNNAMED
 # worktree without moving the whole tree.
 JDBC_CONNECTOR_DIR={connectors}/jdbc-connector
 S3_CONNECTOR_DIR={connectors}/s3-connector
+
+# The frontend's yaml default is a hardcoded /work/main path, not derived
+# from CORE_SERVICES_DIR, so a workspace on any other tree silently runs
+# the WRONG checkout's BFF unless this is set explicitly.
+FRONTEND_DIR={ws.root / ws.tree}/frontend/pipestream-frontend
 """
     render_gid = _render_gid()
     if render_gid is not None:
