@@ -362,6 +362,14 @@ FRONTEND_DIR={ws.root / ws.tree}/frontend/pipestream-frontend
 # consumers (semantic-graph's djl-serving REST client) read this from the
 # global env; their %dev default points at a dead port.
 EMBEDDER_DJL_SERVING_URL=http://localhost:8090
+
+# The dev-services OpenSearch. The BFF's repository explorer / telemetry
+# doors resolve OpenSearch from these (osquery/impl.ts) and answer 503
+# "metadata store is unavailable" when they are absent; nothing defaults
+# them for host processes.
+OPENSEARCH_HOST=localhost
+OPENSEARCH_PORT=9200
+OPENSEARCH_PROTOCOL=http
 """
     render_gid = _render_gid()
     if render_gid is not None:
