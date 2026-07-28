@@ -96,6 +96,10 @@ def cmd_dev_down(args: argparse.Namespace) -> int:
     return dev_compose.down()
 
 
+def cmd_e2e_smoke(args: argparse.Namespace) -> int:
+    return dev_compose.e2e_smoke(manifest.load())
+
+
 def cmd_reference_sync(args: argparse.Namespace) -> int:
     ws = manifest.load()
     if args.list:
@@ -221,6 +225,18 @@ def main() -> int:
         help="Stop the process-compose dev stack",
     )
     p_down.set_defaults(func=cmd_dev_down)
+
+    p_smoke = sub.add_parser(
+        "e2e-smoke",
+        help="Prove the running dev grid with the two E2E scenarios",
+        description="Run the frontend regression suite's goldenPath and "
+                    "demoJdbcSeed scenarios (live leg) against this "
+                    "machine's grid. A pass proves the module catalog, "
+                    "embedding backends, engine, repository, OpenSearch, "
+                    "the demo database seed and the jdbc CDC path end to "
+                    "end. Requires the grid up (dev-up) and healthy.",
+    )
+    p_smoke.set_defaults(func=cmd_e2e_smoke)
 
     p_all = sub.add_parser(
         "all",

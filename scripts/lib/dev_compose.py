@@ -1,6 +1,7 @@
 """Wrap process-compose for the dev stack."""
 from __future__ import annotations
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -80,3 +81,41 @@ def _ensure_env() -> bool:
     else:
         ui.info("Run `./bootstrap.sh seed` to generate a default .env")
     return False
+
+
+def e2e_smoke(ws) -> int:
+    """Run the two proving E2E scenarios against the local dev grid.
+
+    goldenPath (file connector demo pipeline: deploy -> upload -> repository
+    -> traces -> teardown) and demoJdbcSeed (CDC seed -> replication slot
+    lifecycle on the demo database). Both run the frontend regression suite's
+    live leg against this machine's BFF, so a pass proves the grid end to
+    end: module catalog, embedding backends, engine, repository, OpenSearch,
+    the demo database seed and the jdbc connector's CDC path.
+
+    :param ws: the loaded workspace (locates the frontend checkout)
+    :return: 0 when both scenarios pass
+    """
+    fe_dir = ws.root / ws.tree / "frontend" / "pipestream-frontend"
+    app_dir = fe_dir / "apps" / "pipestream-frontend"
+    if not (app_dir / "package.json").exists():
+        ui.error(f"frontend checkout missing: {app_dir}")
+        return 1
+    if not shutil.which("pnpm"):
+        ui.error("pnpm not on PATH — run `./bootstrap.sh check` first.")
+        return 1
+    env = dict(os.environ,
+               FE_BASE_URL="http://localhost:38106",
+               REGRESSION_LEG="live")
+    ui.header("E2E smoke (goldenPath + demoJdbcSeed, live leg)")
+    rc = 0
+    for scenario in ("goldenPath", "demoJdbcSeed"):
+        cmd = ["pnpm", "-C", str(app_dir), "test:regression", scenario]
+        ui.info(f"running: {' '.join(cmd)}")
+        r = subprocess.run(cmd, cwd=str(fe_dir), env=env).returncode
+        if r != 0:
+            ui.error(f"{scenario} FAILED (exit {r})")
+            rc = 1
+        else:
+            ui.info(f"{scenario} passed")
+    return rc
