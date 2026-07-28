@@ -218,7 +218,7 @@ def sync_refs(ws: Workspace, mode: str = "clone") -> int:
 
     ui.header(f"Reference-code sync ({mode})")
     ui.info(f"Workspace root:  {ws.root}")
-    ui.info(f"Destination:     {ws.root / RefRepo.REF_PATH}")
+    ui.info(f"Destination:     {ws.root / ws.ref_repos[0].ref_path}")
     ui.info(f"Parallelism:     {ws.parallelism}")
     ui.info(f"Refs:            {len(ws.ref_repos)}")
     ui.plain("")

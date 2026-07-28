@@ -247,7 +247,7 @@ def main() -> int:
         "reference-sync",
         help="Clone/update reference-code repos (OSS upstreams)",
         description="Clone every [[ref_repo]] from config/workspace.toml into "
-                    "<workspace.root>/main/reference-code/<name>. These are "
+                    "<workspace.root>/<tree>/reference-code/<name>. These are "
                     "OSS upstreams (Quarkus, Vert.x, Tika, etc.) used for "
                     "grep / patch workflows; they're never built. Idempotent: "
                     "existing clones are skipped (or fast-forwarded with --update).",

@@ -50,25 +50,25 @@ class Repo:
 @dataclass(frozen=True)
 class RefRepo:
     """An OSS reference repo — full git URL, never built, lives at
-    <root>/main/reference-code/<name>. Vendored for grep / upstream-patch
+    <root>/<tree>/reference-code/<name>. Vendored for grep / upstream-patch
     workflows; not part of any platform build.
     """
     name: str
     url: str
     branch: str = ""    # "" = remote default branch
-
-    REF_PATH = "main/reference-code"
+    ref_path: str = "main/reference-code"
 
     def dest(self, root: Path) -> Path:
-        return root / self.REF_PATH / self.name
+        return root / self.ref_path / self.name
 
     def relative_dest(self) -> str:
-        return f"{self.REF_PATH}/{self.name}"
+        return f"{self.ref_path}/{self.name}"
 
 
 @dataclass(frozen=True)
 class Workspace:
     root: Path
+    tree: str            # first path segment under root ("main", "integration")
     m2_repo: Path
     jdk: str
     clone_protocol: str
@@ -127,6 +127,7 @@ def load() -> Workspace:
 
     ws = cfg.get("workspace", {})
     root = Path(str(ws.get("root", "/work"))).expanduser()
+    tree = str(ws.get("tree", "main")).strip().strip("/") or "main"
 
     m2_str = str(ws.get("m2_repo", "")).strip()
     if m2_str:
@@ -135,9 +136,19 @@ def load() -> Workspace:
         # default: <home>/.m2/repository (the maven convention)
         m2_repo = Path.home() / ".m2" / "repository"
 
+    # Manifest paths are written against the canonical "main" tree; a
+    # different workspace.tree (e.g. "integration") relocates the whole
+    # layout by swapping that first segment. Only the leading segment is
+    # rewritten — nothing inside a repo path ever changes.
+    def _retree(path: str) -> str:
+        head, _, tail = path.partition("/")
+        if head == "main" and tree != "main":
+            return f"{tree}/{tail}" if tail else tree
+        return path
+
     repos = tuple(
         Repo(
-            path=r["path"],
+            path=_retree(r["path"]),
             name=r["name"],
             dir_name=r.get("dir_name", ""),
             branch=r.get("branch", "main"),
@@ -151,12 +162,14 @@ def load() -> Workspace:
             name=r["name"],
             url=r["url"],
             branch=r.get("branch", ""),
+            ref_path=f"{tree}/reference-code",
         )
         for r in cfg.get("ref_repo", [])
     )
 
     return Workspace(
         root=root,
+        tree=tree,
         m2_repo=m2_repo,
         jdk=str(ws.get("jdk", "25-tem")),
         clone_protocol=str(ws.get("clone_protocol", "https")),
