@@ -10,7 +10,7 @@ services:
   # Docling Serve on the GPU (cu128). REST convert API on :5001.
   docling-serve:
     container_name: ddl-docling-gpu
-    image: ghcr.io/docling-project/docling-serve-cu128:v1.28.0
+    image: ghcr.io/docling-project/docling-serve-cu128:v1.29.0
     ports: ["5001:5001"]
     gpus: all
     environment:

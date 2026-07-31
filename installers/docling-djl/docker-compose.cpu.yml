@@ -8,7 +8,7 @@ name: docling-djl-cpu
 services:
   docling-serve:
     container_name: ddl-docling-cpu
-    image: ghcr.io/docling-project/docling-serve:v1.28.0
+    image: ghcr.io/docling-project/docling-serve:v1.29.0
     ports: ["5001:5001"]
     environment:
       DOCLING_SERVE_ENABLE_UI: "false"
