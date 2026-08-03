@@ -5,6 +5,7 @@ import subprocess
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from . import ui
 from .manifest import RefRepo, Repo, Workspace
@@ -19,6 +20,78 @@ class Result:
 
 def _is_git_repo(path: Path) -> bool:
     return (path / ".git").exists()
+
+
+def _norm_url(u: str) -> str:
+    """Normalize a git URL for comparison: fold the scp-like ssh form into
+    host/path, drop credentials, scheme, a .git suffix, and trailing slashes.
+    """
+    u = (u or "").strip()
+    if u.startswith("git@"):
+        host, _, path = u[4:].partition(":")
+        return f"{host}/{path}".removesuffix(".git").rstrip("/")
+    s = urlsplit(u)
+    if s.scheme and s.hostname:
+        return f"{s.hostname}{s.path}".removesuffix(".git").rstrip("/")
+    return u.removesuffix(".git").rstrip("/")
+
+
+def _reconcile_origin(dest: Path, want_url: str) -> str:
+    """Point origin at the manifest URL when it has drifted.
+
+    Fixes two things the ff-only updater can't recover from on its own:
+    repos renamed upstream (the old URL answers fetch with a 301 git won't
+    follow) and credentials embedded in the URL (scrubbed; auth comes from
+    the configured credential helper instead). An ssh-form origin whose
+    host/path already matches is a deliberate local choice and is left
+    alone. Returns a short note for the result detail, or "".
+    """
+    cur = subprocess.run(
+        ["git", "-C", str(dest), "remote", "get-url", "origin"],
+        capture_output=True, text=True,
+    )
+    if cur.returncode != 0:
+        return ""  # no origin remote — not ours to manage
+    cur_url = cur.stdout.strip()
+    renamed = _norm_url(cur_url) != _norm_url(want_url)
+    authority = cur_url.split("://", 1)[1].split("/", 1)[0] if "://" in cur_url else ""
+    has_creds = "@" in authority
+    if not renamed and not has_creds:
+        return ""
+    subprocess.run(
+        ["git", "-C", str(dest), "remote", "set-url", "origin", want_url],
+        capture_output=True, text=True,
+    )
+    return "origin repointed" if renamed else "origin credentials scrubbed"
+
+
+def _explain_no_ff(dest: Path) -> str:
+    """Say WHY an ff-only pull declined, so a skip after an upstream
+    rebase doesn't send someone hunting for local changes that don't exist.
+    """
+    dirty = bool(subprocess.run(
+        ["git", "-C", str(dest), "status", "--porcelain"],
+        capture_output=True, text=True,
+    ).stdout.strip())
+    counts = subprocess.run(
+        ["git", "-C", str(dest), "rev-list", "--left-right", "--count",
+         "HEAD...@{upstream}"],
+        capture_output=True, text=True,
+    )
+    if counts.returncode != 0:
+        base = "checked-out branch has no upstream"
+    else:
+        ahead, behind = (int(x) for x in counts.stdout.split())
+        if ahead and behind:
+            base = (f"diverged: {ahead} local-only commit(s) vs {behind} "
+                    "upstream (history rewritten?)")
+        elif ahead:
+            base = f"{ahead} local-only commit(s)"
+        elif dirty:
+            return "local changes in working tree"
+        else:
+            base = "ff-only pull declined"
+    return base + (" + dirty tree" if dirty else "")
 
 
 def _clone(repo: Repo, dest: Path, url: str) -> Result:
@@ -40,22 +113,25 @@ def _clone(repo: Repo, dest: Path, url: str) -> Result:
     return Result(repo, "failed", _last_line(err) or "clone failed")
 
 
-def _update(repo: Repo, dest: Path) -> Result:
+def _update(repo: Repo, dest: Path, url: str) -> Result:
+    note = _reconcile_origin(dest, url)
     fetch = subprocess.run(
         ["git", "-C", str(dest), "fetch", "--all", "--prune"],
         capture_output=True, text=True,
     )
+    def _with_note(detail: str) -> str:
+        return "; ".join(p for p in (detail, note) if p)
     if fetch.returncode != 0:
-        return Result(repo, "failed", "fetch failed: " + _last_line(fetch.stderr))
+        return Result(repo, "failed", _with_note("fetch failed: " + _last_line(fetch.stderr)))
     pull = subprocess.run(
         ["git", "-C", str(dest), "pull", "--ff-only"],
         capture_output=True, text=True,
     )
     if pull.returncode != 0:
-        return Result(repo, "skipped", "ff-only pull declined (local changes?)")
+        return Result(repo, "skipped", _with_note(_explain_no_ff(dest)))
     if "Already up to date" in (pull.stdout + pull.stderr):
-        return Result(repo, "updated", "already up-to-date")
-    return Result(repo, "updated")
+        return Result(repo, "updated", _with_note("already up-to-date"))
+    return Result(repo, "updated", _with_note(""))
 
 
 def _last_line(s: str) -> str:
@@ -72,7 +148,7 @@ def _process_one(repo: Repo, ws: Workspace, mode: str) -> Result:
             return Result(repo, "would-update" if mode == "update" else "skipped",
                           "exists")
         if mode == "update":
-            return _update(repo, dest)
+            return _update(repo, dest, url)
         return Result(repo, "skipped", "exists")
 
     if mode == "list":
@@ -202,21 +278,24 @@ def _clone_ref(ref: RefRepo, dest: Path) -> RefResult:
 
 
 def _update_ref(ref: RefRepo, dest: Path) -> RefResult:
+    note = _reconcile_origin(dest, ref.url)
     fetch = subprocess.run(
         ["git", "-C", str(dest), "fetch", "--all", "--prune"],
         capture_output=True, text=True,
     )
+    def _with_note(detail: str) -> str:
+        return "; ".join(p for p in (detail, note) if p)
     if fetch.returncode != 0:
-        return RefResult(ref, "failed", "fetch failed: " + _last_line(fetch.stderr))
+        return RefResult(ref, "failed", _with_note("fetch failed: " + _last_line(fetch.stderr)))
     pull = subprocess.run(
         ["git", "-C", str(dest), "pull", "--ff-only"],
         capture_output=True, text=True,
     )
     if pull.returncode != 0:
-        return RefResult(ref, "skipped", "ff-only pull declined (local changes?)")
+        return RefResult(ref, "skipped", _with_note(_explain_no_ff(dest)))
     if "Already up to date" in (pull.stdout + pull.stderr):
-        return RefResult(ref, "updated", "already up-to-date")
-    return RefResult(ref, "updated")
+        return RefResult(ref, "updated", _with_note("already up-to-date"))
+    return RefResult(ref, "updated", _with_note(""))
 
 
 def _process_ref(ref: RefRepo, ws: Workspace, mode: str) -> RefResult:
