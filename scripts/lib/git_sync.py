@@ -119,6 +119,9 @@ def sync(ws: Workspace, mode: str = "clone") -> int:
         if n:
             ui.plain(f"  {action:14s} {n}")
 
+    if mode != "list":
+        _drop_category_docs(ws)
+
     if counts.get("failed", 0):
         ui.plain("")
         ui.error("Some operations failed:")
@@ -127,6 +130,30 @@ def sync(ws: Workspace, mode: str = "clone") -> int:
                 ui.error(f"  {r.repo.relative_dest()}: {r.detail}")
         return 1
     return 0
+
+
+def _drop_category_docs(ws: Workspace) -> None:
+    """Copy per-category orientation docs into the workspace.
+
+    A file config/category-docs/<category>.md in this repo lands at
+    <root>/<tree>/<category>/AGENTS.md whenever that category directory
+    exists — so docs like the grpc-services orientation hydrate on fresh
+    machines and stay current on `clone --update`.
+    """
+    docs_dir = Path(__file__).resolve().parents[2] / "config" / "category-docs"
+    if not docs_dir.is_dir():
+        return
+    tree_root = ws.root / ws.tree
+    for doc in sorted(docs_dir.glob("*.md")):
+        category_dir = tree_root / doc.stem
+        if not category_dir.is_dir():
+            continue
+        dest = category_dir / "AGENTS.md"
+        content = doc.read_text()
+        if dest.exists() and dest.read_text() == content:
+            continue
+        dest.write_text(content)
+        ui.ok(f"docs     {ws.tree}/{doc.stem}/AGENTS.md")
 
 
 def _print_result(r: Result, root: Path) -> None:

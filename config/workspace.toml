@@ -186,6 +186,44 @@ name = "jdbc-connector"
 path = "main/connectors"
 name = "s3-connector"
 
+# ---- grpc-services ------------------------------------------------------
+# Standalone gRPC extraction/search services. NOT part of the pipestream
+# core platform (no module contract, not in process-compose / the platform
+# build) — they are the GitHub-side research arm alongside opennlp. Hosted
+# on github.com/ai-pipestream (some mirrored to Forgejo), hence the `url`
+# override. See the AGENTS.md the bootstrap drops in this directory.
+[[repo]]
+path = "main/grpc-services"
+name = "calamine"
+url = "https://github.com/ai-pipestream/calamine.git"
+branch = "pipestream-main"
+
+[[repo]]
+path = "main/grpc-services"
+name = "grpc-calamine"
+url = "https://github.com/ai-pipestream/grpc-calamine.git"
+
+[[repo]]
+path = "main/grpc-services"
+name = "grpc-libreoffice"
+url = "https://github.com/ai-pipestream/grpc-libreoffice.git"
+
+[[repo]]
+path = "main/grpc-services"
+name = "grpc-lol-html"
+url = "https://github.com/ai-pipestream/grpc-lol-html.git"
+branch = "master"
+
+[[repo]]
+path = "main/grpc-services"
+name = "grPOIc"
+url = "https://github.com/ai-pipestream/grPOIc.git"
+
+[[repo]]
+path = "main/grpc-services"
+name = "distributed-search"
+url = "https://github.com/ai-pipestream/distributed-search.git"
+
 # ---- frontend -----------------------------------------------------------
 # pnpm + Vue/Vuetify. Process-compose does not start it (yet).
 [[repo]]
@@ -684,3 +722,43 @@ url = "https://github.com/bigconnect/clavin.git"
 [[ref_repo]]
 name = "incoming-projects/mordecai"
 url = "https://github.com/openeventdata/mordecai.git"
+
+# ---- Synced from krick:/work/reference-code 2026-08-03 ------------------
+# Search/vector engines, the OVMS server source, and misc upstreams that
+# appeared on krick since the 07-28 sync. Not synced on purpose:
+# libreoffice (tarball drop, not a git clone on krick).
+[[ref_repo]]
+name = "brave-search-cli"
+url = "https://github.com/brave/brave-search-cli.git"
+
+[[ref_repo]]
+name = "cuvs-lucene"
+url = "https://github.com/NVIDIA/cuvs-lucene.git"
+
+[[ref_repo]]
+name = "MetaGer"
+url = "https://gitlab.metager.de/open-source/MetaGer.git"
+
+[[ref_repo]]
+name = "model_server"
+url = "https://github.com/openvinotoolkit/model_server.git"
+
+[[ref_repo]]
+name = "qdrant"
+url = "https://github.com/qdrant/qdrant.git"
+
+[[ref_repo]]
+name = "quickwit"
+url = "https://github.com/quickwit-oss/quickwit.git"
+
+[[ref_repo]]
+name = "routee-compass"
+url = "https://github.com/NREL/routee-compass.git"
+
+[[ref_repo]]
+name = "tantivy"
+url = "https://github.com/quickwit-oss/tantivy.git"
+
+[[ref_repo]]
+name = "wire"
+url = "https://github.com/square/wire.git"

@@ -34,6 +34,9 @@ class Repo:
                           # stays put since other config points there)
     branch: str = "main"
     build_first: bool = False
+    url: str = ""        # full clone URL override for repos hosted outside
+                          # the Forgejo org (e.g. the GitHub-side grpc-services);
+                          # when set, protocol/org are ignored
 
     def dest(self, root: Path) -> Path:
         return root / self.path / (self.dir_name or self.name)
@@ -42,6 +45,8 @@ class Repo:
         return f"{self.path}/{self.dir_name or self.name}"
 
     def clone_url(self, protocol: str, org: str) -> str:
+        if self.url:
+            return self.url
         if protocol == "ssh":
             return f"git@{FORGEJO_HOST}:{org}/{self.name}.git"
         return f"https://{FORGEJO_HOST}/{org}/{self.name}.git"
@@ -153,6 +158,7 @@ def load() -> Workspace:
             dir_name=r.get("dir_name", ""),
             branch=r.get("branch", "main"),
             build_first=r.get("build_first", False),
+            url=r.get("url", ""),
         )
         for r in cfg.get("repo", [])
     )
