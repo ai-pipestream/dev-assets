@@ -81,6 +81,11 @@ class Workspace:
     forgejo_org: str
     repos: tuple[Repo, ...]
     ref_repos: tuple[RefRepo, ...]
+    # Per-JVM heap ceiling for the dev grid, as -XX:MaxRAMPercentage.
+    # "auto" sizes it from physical RAM (no-op on big boxes, capped on
+    # small ones — see dev_compose._grid_ram_cap), "off" never injects,
+    # a number forces that percentage. Per-machine override friendly.
+    grid_jvm_max_ram: str = "auto"
 
     def repo_named(self, name: str) -> Repo | None:
         for r in self.repos:
@@ -183,4 +188,5 @@ def load() -> Workspace:
         forgejo_org=str(ws.get("forgejo_org", "ai-pipestream")),
         repos=repos,
         ref_repos=ref_repos,
+        grid_jvm_max_ram=str(ws.get("grid_jvm_max_ram", "auto")),
     )

@@ -35,6 +35,16 @@ clone_protocol = "https"
 # Parallel git clones during the bootstrap clone phase.
 parallelism = 8
 
+# Per-JVM heap ceiling for the dev grid, injected as
+# JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=<n> by `dev-up`.
+#   "auto"  hosts with >= 64 GiB RAM run uncapped; smaller hosts get
+#           roughly (RAM/2)/20-services per JVM, floored at 512 MiB
+#           (a 24 GiB Mac lands at 2.5% ≈ 600 MiB per service)
+#   "off"   never inject (pre-2026-08 behavior everywhere)
+#   "4"     force that percentage
+# Set per machine in ~/.config/ai-pipestream/workspace.toml.
+grid_jvm_max_ram = "auto"
+
 # Forgejo org all platform repos live under (git.rokkon.com). Forgejo is the
 # source of truth as of 2026-07-07 — GitHub is a live push-mirror, never
 # clone/pull from it. (Historically this cloned from github.com; if a

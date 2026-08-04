@@ -29,6 +29,52 @@ _TCP_LISTEN = "0A"
 HELD_PORTS_EXIT = 69
 
 
+def _mem_total_gb() -> float | None:
+    """Physical RAM in GiB — /proc/meminfo on Linux, sysctl on macOS."""
+    meminfo = PROC / "meminfo"
+    if meminfo.exists():
+        for line in meminfo.read_text().splitlines():
+            if line.startswith("MemTotal:"):
+                return int(line.split()[1]) / (1024 * 1024)
+    try:
+        out = subprocess.run(["sysctl", "-n", "hw.memsize"],
+                             capture_output=True, text=True)
+        if out.returncode == 0:
+            return int(out.stdout.strip()) / (1024 ** 3)
+    except (FileNotFoundError, ValueError):
+        pass
+    return None
+
+
+def _grid_ram_cap(total_gb: float | None = None) -> str | None:
+    """The -XX:MaxRAMPercentage to inject for grid JVMs, or None for uncapped.
+
+    Without a cap every service JVM inherits the HotSpot default heap
+    ceiling of 25% of physical RAM — irrelevant on a 128 GiB box, but on a
+    24 GiB machine ~19 dev-mode JVMs each free to grow toward 6 GiB will
+    swap the host to death. Policy: hosts with >= 56 GiB run uncapped —
+    behavior unchanged on the big rigs (a physical 64 GiB box reports ~61
+    after kernel reservations, hence the margin); smaller hosts get a
+    per-JVM ceiling of half the RAM divided across 20 services, floored at
+    512 MiB. Tunable via workspace.toml `grid_jvm_max_ram` = "auto" |
+    "off" | a percentage.
+    """
+    from .manifest import load
+    try:
+        setting = load().grid_jvm_max_ram.strip().lower()
+    except Exception:
+        setting = "auto"
+    if setting in ("off", "0", "none", ""):
+        return None
+    if setting != "auto":
+        return setting
+    total = total_gb if total_gb is not None else _mem_total_gb()
+    if total is None or total >= 56:
+        return None
+    per_jvm_gb = max(total * 0.5 / 20, 0.5)
+    return str(max(2.0, round(per_jvm_gb / total * 100, 1)))
+
+
 def pc_port(env_file: Path = ENV_FILE) -> str:
     """The process-compose API port the grid is expected on.
 
@@ -158,9 +204,21 @@ def up(detached: bool = True, ignore_held_ports: bool = False) -> int:
            "--port", pc_port()]
     if detached:
         cmd.append("--detached")
+    env = dict(os.environ)
+    cap = _grid_ram_cap()
+    if cap:
+        if "JAVA_TOOL_OPTIONS" in env:
+            ui.info(f"JAVA_TOOL_OPTIONS already set — honoring yours instead of "
+                    f"-XX:MaxRAMPercentage={cap}")
+        else:
+            env["JAVA_TOOL_OPTIONS"] = f"-XX:MaxRAMPercentage={cap}"
+            total = _mem_total_gb()
+            ui.info(f"grid JVM heap cap: -XX:MaxRAMPercentage={cap}"
+                    f" (host RAM {total:.0f} GiB;"
+                    " tune with workspace.toml grid_jvm_max_ram)")
     ui.info(f"cwd: {PIPELINE_DEV_DIR}")
     ui.info(f"running: {' '.join(cmd)}")
-    return subprocess.run(cmd, cwd=str(PIPELINE_DEV_DIR)).returncode
+    return subprocess.run(cmd, cwd=str(PIPELINE_DEV_DIR), env=env).returncode
 
 
 def down() -> int:

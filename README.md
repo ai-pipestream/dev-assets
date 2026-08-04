@@ -68,6 +68,41 @@ can. Two are hard stops it will not install for you:
 Optional: `grpcurl` (the health gate's module-catalog check skips without it),
 `tmux` + PyYAML (only for the `dev-grid.sh` tmux launcher).
 
+## Running on macOS
+
+Everything here runs on macOS; the platform-specific pieces are already
+handled — `check` installs gh via Homebrew, skips the NVIDIA toolkit, the
+port preflight falls back to bind-probing (no `/proc`), and the buf /
+process-compose installers detect Darwin. What you must do differently:
+
+1. **Pick a workspace root.** macOS won't let you create `/work` (SIP owns
+   `/`). Put the root somewhere writable via the per-machine override,
+   `~/.config/ai-pipestream/workspace.toml`:
+
+   ```toml
+   [workspace]
+   root = "~/work"        # repos land at ~/work/main/..., refs at
+   m2_repo = ""           # ~/work/main/reference-code; "" = ~/.m2/repository
+   ```
+
+2. **python3 >= 3.11** — the system python is too old; `brew install
+   python3` first (bootstrap.sh tells you this too).
+
+3. **Docker Desktop / colima VM sizing.** Containers run in a VM with its
+   own fixed memory slice. On a 24 GiB machine give the VM 6–8 GiB (it
+   holds Kafka, OpenSearch, and friends) and leave the rest to the JVMs.
+
+4. **Memory: the grid self-caps on small-RAM hosts.** Every service JVM
+   defaults to a heap ceiling of 25% of physical RAM — fine on a 128 GiB
+   box, a swap-storm on 24 GiB with ~19 dev-mode JVMs. On hosts under
+   64 GiB, `dev-up` injects `JAVA_TOOL_OPTIONS=-XX:MaxRAMPercentage=<n>`
+   sized to fit half the RAM across the fleet (24 GiB ⇒ ~600 MiB per
+   service). Tune or disable with `grid_jvm_max_ram` in the override file;
+   a JVM that genuinely needs more can be raised individually in
+   `~/.pipeline/dev/process-compose.yaml` — a service-level
+   `JAVA_TOOL_OPTIONS` beats the injected default. Builds are unaffected
+   (they already run serially).
+
 ## The two rigs
 
 They run the same platform and **must not run at the same time** — they bind the
