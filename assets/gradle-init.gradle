@@ -20,8 +20,18 @@
 import org.gradle.api.artifacts.repositories.MavenArtifactRepository
 
 def FORGEJO_MAVEN     = 'https://git.rokkon.com/api/packages/ai-pipestream/maven'
-def REPOSILITE        = 'https://maven.rokkon.com/releases'
-def REPOSILITE_SNAP   = 'https://maven.rokkon.com/snapshots'
+// Base of the Reposilite pull-through cache. Defaults to the NAS, so CI and
+// every existing machine are unaffected. Override with the REPOSILITE_URL env
+// var to point at a local instance — a workstation running its own Reposilite
+// keeps building while the NAS is unreachable, and once that cache is warm the
+// build works fully offline.
+def REPOSILITE_BASE   = System.getenv('REPOSILITE_URL') ?: 'https://maven.rokkon.com'
+def REPOSILITE        = "${REPOSILITE_BASE}/releases"
+def REPOSILITE_SNAP   = "${REPOSILITE_BASE}/snapshots"
+// True when this machine resolves through its own cache rather than the NAS.
+// Such an instance mirrors Forgejo itself, so it becomes the single funnel for
+// every group including ours — see the forgejoPackages block below.
+def LOCAL_CACHE       = System.getenv('REPOSILITE_URL') != null
 def OUR_GROUP         = 'ai\\.pipestream(\\..*)?'
 // Hosts we proxy through Reposilite instead of hitting directly.
 def PROXIED_HOSTS = ['repo.maven.apache.org', 'repo1.maven.org', 'repo.maven.org',
@@ -45,10 +55,15 @@ applyPolicy = { repos, user, token ->
     //    (court data jars, test-documents, wiremock-server, opensearch-client) live
     //    on Central, not Forgejo. Forgejo is first for ai.pipestream (SNAPSHOTs +
     //    Forgejo-hosted); the proxy is the fallback for our Central-hosted releases.
+    // A local cache is typically plain HTTP on loopback, which Gradle 8+ rejects
+    // without an explicit opt-in. Allow it only for http:// so the NAS default
+    // can never silently downgrade — a loopback hop has no transport to protect.
+    def insecure = REPOSILITE_BASE.startsWith('http://')
     if (repos.findByName('reposiliteSnapshots') == null) {
         def sx = repos.maven {
             name = 'reposiliteSnapshots'
             url = REPOSILITE_SNAP
+            allowInsecureProtocol = insecure
             mavenContent { snapshotsOnly() }
         }
         repos.remove(sx); repos.add(0, sx)
@@ -57,11 +72,18 @@ applyPolicy = { repos, user, token ->
         def px = repos.maven {
             name = 'reposiliteProxy'
             url = REPOSILITE
+            allowInsecureProtocol = insecure
         }
         repos.remove(px); repos.add(0, px)
     }
-    // 4. Forgejo FIRST for ai.pipestream.*
-    if (repos.findByName('forgejoPackages') == null) {
+    // 4. Forgejo FIRST for ai.pipestream.* — but only when resolving against the
+    //    NAS. A local Reposilite is configured to mirror Forgejo for this group,
+    //    so adding a second, direct route would be redundant and actively
+    //    harmful: Gradle falls through a 404 to the next repository but treats a
+    //    connect timeout as fatal. With Forgejo unreachable, a direct entry at
+    //    position 0 fails the build even though mavenLocal holds the artifact,
+    //    whereas the same lookup through Reposilite 404s and falls through.
+    if (!LOCAL_CACHE && repos.findByName('forgejoPackages') == null) {
         def fj = repos.maven {
             name = 'forgejoPackages'
             url = FORGEJO_MAVEN
