@@ -315,6 +315,14 @@ dir_name = "release"
 # its own [[ref_repo]] table fully REPLACES this list (TOML array semantics).
 # To add a single repo, copy this list into your override and append.
 
+# ---- dev tooling we vendor for reference --------------------------------
+# process-compose drives the dev grid; `dev-up` shells out to it. Vendored so
+# the flag surface and config schema can be read offline, and pinned behaviour
+# checked against the exact release in ~/.local/bin.
+[[ref_repo]]
+name = "process-compose"
+url = "https://github.com/F1bonacc1/process-compose.git"
+
 # ---- Quarkus + extensions used by the platform -------------------------
 [[ref_repo]]
 name = "quarkus"
