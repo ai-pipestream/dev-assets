@@ -141,7 +141,7 @@ def _last_line(s: str) -> str:
 
 def _process_one(repo: Repo, ws: Workspace, mode: str) -> Result:
     dest = repo.dest(ws.root)
-    url = repo.clone_url(ws.clone_protocol, ws.forgejo_org)
+    url = repo.clone_url(ws.clone_protocol, ws.forgejo_org, ws.git_host)
 
     if _is_git_repo(dest):
         if mode == "list":
@@ -172,6 +172,7 @@ def sync(ws: Workspace, mode: str = "clone") -> int:
     ui.header(f"Workspace sync ({mode})")
     ui.info(f"Workspace root:  {ws.root}")
     ui.info(f"Forgejo org:     {ws.forgejo_org}")
+    ui.info(f"Clone host:      {ws.git_host}")
     ui.info(f"Protocol:        {ws.clone_protocol}")
     ui.info(f"Parallelism:     {ws.parallelism}")
     ui.info(f"Repos:           {len(ws.repos)}")

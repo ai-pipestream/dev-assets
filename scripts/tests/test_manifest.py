@@ -6,6 +6,7 @@ cut a release, or run the e2e battery.
 """
 from __future__ import annotations
 
+import dataclasses
 import sys
 from pathlib import Path
 
@@ -87,6 +88,22 @@ def test_exactly_one_build_first_repo():
 def test_clone_urls_point_at_forgejo():
     ws = _ws()
     for r in ws.repos:
-        url = r.clone_url(ws.clone_protocol, ws.forgejo_org)
+        # Repos carrying an explicit url live outside the Forgejo org by
+        # design (the GitHub-hosted grpc-services), so they are exempt. Without
+        # this the assertion has failed for every one of them since the
+        # grpc-services category was added.
+        if r.url:
+            continue
+        url = r.clone_url(ws.clone_protocol, ws.forgejo_org, ws.git_host)
         assert manifest.FORGEJO_HOST in url, f"{r.name} does not clone from Forgejo"
         assert "github.com" not in url, f"{r.name} still points at the GitHub mirror"
+
+
+def test_git_host_override_redirects_only_forgejo_repos():
+    ws = dataclasses.replace(_ws(), git_host="github.com")
+    for r in ws.repos:
+        url = r.clone_url(ws.clone_protocol, ws.forgejo_org, ws.git_host)
+        if r.url:
+            assert url == r.url, f"{r.name}'s explicit url was rewritten"
+        else:
+            assert "github.com" in url, f"{r.name} ignored the git_host override"

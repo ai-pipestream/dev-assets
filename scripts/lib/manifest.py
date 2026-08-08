@@ -44,12 +44,12 @@ class Repo:
     def relative_dest(self) -> str:
         return f"{self.path}/{self.dir_name or self.name}"
 
-    def clone_url(self, protocol: str, org: str) -> str:
+    def clone_url(self, protocol: str, org: str, host: str = FORGEJO_HOST) -> str:
         if self.url:
             return self.url
         if protocol == "ssh":
-            return f"git@{FORGEJO_HOST}:{org}/{self.name}.git"
-        return f"https://{FORGEJO_HOST}/{org}/{self.name}.git"
+            return f"git@{host}:{org}/{self.name}.git"
+        return f"https://{host}/{org}/{self.name}.git"
 
 
 @dataclass(frozen=True)
@@ -79,6 +79,12 @@ class Workspace:
     clone_protocol: str
     parallelism: int
     forgejo_org: str
+    # Host the manifest repos are cloned from. Defaults to Forgejo, the source
+    # of truth. Override per machine (git_host in workspace.toml) to populate a
+    # workspace from the github.com backup while Forgejo is unreachable —
+    # clone only. Pushes still belong on Forgejo, so repoint origin afterwards
+    # rather than leaving a workspace aimed at the mirror.
+    git_host: str
     repos: tuple[Repo, ...]
     ref_repos: tuple[RefRepo, ...]
     # Per-JVM heap ceiling for the dev grid, as -XX:MaxRAMPercentage.
@@ -186,6 +192,7 @@ def load() -> Workspace:
         clone_protocol=str(ws.get("clone_protocol", "https")),
         parallelism=int(ws.get("parallelism", 8)),
         forgejo_org=str(ws.get("forgejo_org", "ai-pipestream")),
+        git_host=str(ws.get("git_host", FORGEJO_HOST)),
         repos=repos,
         ref_repos=ref_repos,
         grid_jvm_max_ram=str(ws.get("grid_jvm_max_ram", "auto")),
