@@ -56,20 +56,34 @@ def test_workspace_tree_relocates_the_whole_layout(tmp_path, monkeypatch):
         {r.path.partition("/")[2] for r in base.repos}
 
 
-def test_build_conventions_is_in_the_manifest():
-    names = {r.name for r in _ws().repos}
-    assert "pipestream-build-conventions" in names
-
-
-def test_court_fixture_repos_are_in_the_manifest():
-    """The e2e suite consumes these per-stage corpora; there is no single
-    test-docs repo, so each stage repo needs its own entry."""
+def test_dead_court_fixture_entries_are_gone():
+    """The per-stage court corpora and sample-documents were deleted upstream
+    on 2026-08-08. Same failure mode as pipestream-proto-tools below: leaving
+    the entries made `bootstrap clone` 404 ten times on every fresh machine.
+    The e2e battery that consumed them had already drifted out of use."""
     ws = _ws()
-    dests = {r.relative_dest() for r in ws.repos}
-    for stage in ("chunker-input-court", "embedder-input-court",
-                  "opensearch-sink-input-court", "semantic-graph-input-court",
-                  "pipedocs-court-1000"):
-        assert f"{ws.tree}/core-services/test-docs/{stage}" in dests, f"missing {stage}"
+    names = {r.name for r in ws.repos}
+    for dead in ("sample-documents", "_template-input-court",
+                 "chunker-input-court", "embedder-input-court",
+                 "embedder-pipedocs-court", "opensearch-sink-input-court",
+                 "opensearch-sink-input-court-pt1",
+                 "opensearch-sink-input-court-pt2", "pipedocs-court-1000",
+                 "semantic-graph-input-court"):
+        assert dead not in names, f"{dead} was deleted upstream"
+    assert not [r for r in ws.repos if "test-docs" in r.path], \
+        "the test-docs category is retired"
+
+
+def test_dead_build_conventions_entry_is_gone():
+    """Deleted upstream 2026-08-08 and referenced by no build.gradle."""
+    assert "pipestream-build-conventions" not in {r.name for r in _ws().repos}
+
+
+def test_archived_wiremock_server_is_not_cloned():
+    """pipestream-wiremock-server moved to the ai-pipestream-archive org. The
+    old URL still redirects, so a stale entry clones successfully and silently
+    plants a dead repo in the workspace rather than failing loudly."""
+    assert "pipestream-wiremock-server" not in {r.name for r in _ws().repos}
 
 
 def test_dead_proto_tools_entry_is_gone():
