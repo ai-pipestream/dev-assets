@@ -363,6 +363,16 @@ FRONTEND_DIR={ws.root / ws.tree}/frontend/pipestream-frontend
 # global env; their %dev default points at a dead port.
 EMBEDDER_DJL_SERVING_URL=http://localhost:8090
 
+# Hosts too small to run a local DJL (or teams with a shared instance, e.g.
+# a LAN GPU box or an AWS deployment) can point the whole rig at a remote
+# DJL Serving instead: set BOTH URLs below to the remote base URL.
+# start-dev-djl.sh then launches nothing and verifies the remote answers
+# /ping; register-dev-djl-models.sh registers the required models against it
+# when its management API is reachable, otherwise probes them with real
+# predictions, failing loud if the remote is missing one.
+# DJL_REMOTE_URL=https://djl.example.com
+# EMBEDDER_DJL_SERVING_URL=https://djl.example.com
+
 # The dev-services OpenSearch. The BFF's repository explorer / telemetry
 # doors resolve OpenSearch from these (osquery/impl.ts) and answer 503
 # "metadata store is unavailable" when they are absent; nothing defaults
