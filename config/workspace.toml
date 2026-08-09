@@ -125,14 +125,6 @@ name = "pipestream-opensearch"
 
 [[repo]]
 path = "main/core-services"
-name = "pipestream-wiremock-server"
-
-[[repo]]
-path = "main/core-services"
-name = "sample-documents"
-
-[[repo]]
-path = "main/core-services"
 name = "tika4-shaded"
 
 # ---- core-services/embedders -------------------------------------------
@@ -280,10 +272,6 @@ name = "quarkus-buf-grpc-generator"
 # `bootstrap clone` fail on a 404 for every fresh machine. Deleted 2026-07-26 —
 # any on-disk checkout is left alone.
 
-[[repo]]
-path = "main/dev-tools"
-name = "pipestream-build-conventions"
-
 
 # ---- deploy -------------------------------------------------------------
 # The compose stack and the release train. Both were missing, so a fresh
@@ -304,47 +292,11 @@ dir_name = "release"
 
 
 # ---- core-services/test-docs -------------------------------------------
-# Court-fixture Maven test jars, one repo per pipeline stage. The e2e suite
-# consumes these; without them the pipeline-crawl battery has no corpus.
-# There is no single "test-docs" repo — the directory is a container for the
-# per-stage repos below (see CLAUDE.md, "Court-fixture jars").
-# opensearch-sink ships split pt1/pt2 because the combined jar exceeded the
-# Maven Central size cap; all three entries are real repos.
-[[repo]]
-path = "main/core-services/test-docs"
-name = "_template-input-court"
-
-[[repo]]
-path = "main/core-services/test-docs"
-name = "chunker-input-court"
-
-[[repo]]
-path = "main/core-services/test-docs"
-name = "embedder-input-court"
-
-[[repo]]
-path = "main/core-services/test-docs"
-name = "embedder-pipedocs-court"
-
-[[repo]]
-path = "main/core-services/test-docs"
-name = "opensearch-sink-input-court"
-
-[[repo]]
-path = "main/core-services/test-docs"
-name = "opensearch-sink-input-court-pt1"
-
-[[repo]]
-path = "main/core-services/test-docs"
-name = "opensearch-sink-input-court-pt2"
-
-[[repo]]
-path = "main/core-services/test-docs"
-name = "pipedocs-court-1000"
-
-[[repo]]
-path = "main/core-services/test-docs"
-name = "semantic-graph-input-court"
+# Retired 2026-08-08. The court-fixture repos (_template/chunker/embedder/
+# opensearch-sink/pipedocs/semantic-graph -input-court) and sample-documents
+# were deleted upstream, so `clone` failed on all ten for every fresh
+# workspace. The e2e pipeline-crawl battery that consumed them has drifted out
+# of use; restore from this file's history if that corpus is ever rebuilt.
 
 
 # ============================================================================
@@ -362,6 +314,14 @@ name = "semantic-graph-input-court"
 # Note: a user-override `~/.config/ai-pipestream/workspace.toml` containing
 # its own [[ref_repo]] table fully REPLACES this list (TOML array semantics).
 # To add a single repo, copy this list into your override and append.
+
+# ---- dev tooling we vendor for reference --------------------------------
+# process-compose drives the dev grid; `dev-up` shells out to it. Vendored so
+# the flag surface and config schema can be read offline, and pinned behaviour
+# checked against the exact release in ~/.local/bin.
+[[ref_repo]]
+name = "process-compose"
+url = "https://github.com/F1bonacc1/process-compose.git"
 
 # ---- Quarkus + extensions used by the platform -------------------------
 [[ref_repo]]
