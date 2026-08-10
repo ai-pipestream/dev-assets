@@ -210,27 +210,34 @@ def sync(ws: Workspace, mode: str = "clone") -> int:
 
 
 def _drop_category_docs(ws: Workspace) -> None:
-    """Copy per-category orientation docs into the workspace.
+    """Copy orientation docs into the workspace.
 
     A file config/category-docs/<category>.md in this repo lands at
     <root>/<tree>/<category>/AGENTS.md whenever that category directory
     exists — so docs like the grpc-services orientation hydrate on fresh
     machines and stay current on `clone --update`.
+
+    A file config/workspace-docs/<name>.md lands at <root>/<name>.md under
+    its own name (AGENTS.md, SEEDING.md) — the workspace root is not a repo,
+    so this is the only way those docs reach it.
     """
-    docs_dir = Path(__file__).resolve().parents[2] / "config" / "category-docs"
-    if not docs_dir.is_dir():
-        return
+    config_dir = Path(__file__).resolve().parents[2] / "config"
     tree_root = ws.root / ws.tree
-    for doc in sorted(docs_dir.glob("*.md")):
+    for doc in sorted((config_dir / "category-docs").glob("*.md")):
         category_dir = tree_root / doc.stem
         if not category_dir.is_dir():
             continue
-        dest = category_dir / "AGENTS.md"
-        content = doc.read_text()
-        if dest.exists() and dest.read_text() == content:
-            continue
-        dest.write_text(content)
-        ui.ok(f"docs     {ws.tree}/{doc.stem}/AGENTS.md")
+        _drop_doc(doc, category_dir / "AGENTS.md", f"{ws.tree}/{doc.stem}/AGENTS.md")
+    for doc in sorted((config_dir / "workspace-docs").glob("*.md")):
+        _drop_doc(doc, ws.root / doc.name, doc.name)
+
+
+def _drop_doc(doc: Path, dest: Path, label: str) -> None:
+    content = doc.read_text()
+    if dest.exists() and dest.read_text() == content:
+        return
+    dest.write_text(content)
+    ui.ok(f"docs     {label}")
 
 
 def _print_result(r: Result, root: Path) -> None:
